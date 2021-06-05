@@ -14,17 +14,15 @@ impl InitProcess {
     }
 
     pub fn ready(&mut self) -> Result<()> {
-        log::debug!(
-            "init send to child {:?}",
-            (Message::InitReady as u8).to_be_bytes()
-        );
+        log::debug!("init send to child {:?}", Message::InitReady,);
         self.write_message_for_child(Message::InitReady)?;
         Ok(())
     }
 
     fn write_message_for_child(&mut self, msg: Message) -> Result<()> {
+        // self.sender_for_child.write_all(&(msg as u8).to_be_bytes())?;
         self.sender_for_child
-            .write_all(&(msg as u8).to_be_bytes())?;
+            .write_all(msg.to_string().as_bytes())?;
         Ok(())
     }
 }

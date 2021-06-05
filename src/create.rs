@@ -162,6 +162,7 @@ fn run_container<P: AsRef<Path>>(
             if let Some(csocketfd) = csocketfd {
                 tty::ready(csocketfd)?;
             }
+            // set up tty if specified
 
             // set namespaces
             namespaces.apply_setns()?;

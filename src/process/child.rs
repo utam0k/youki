@@ -41,19 +41,21 @@ impl ChildProcess {
     pub fn ready(&mut self, init_pid: Pid) -> Result<()> {
         log::debug!(
             "child send to parent {:?}",
-            (Message::ChildReady as u8).to_be_bytes()
+            Message::ChildReady(init_pid.as_raw())
         );
-        self.write_message_for_parent(Message::ChildReady)?;
+        self.write_message_for_parent(Message::ChildReady(init_pid.as_raw()))?;
 
-        log::debug!("child send to parent {:?}", init_pid.as_raw().to_be_bytes(),);
-        self.sender_for_parent
-            .write_all(&(init_pid.as_raw()).to_be_bytes())?;
+        // log::debug!("child send to parent {:?}", init_pid.as_raw().to_be_bytes(),);
+        // self.sender_for_parent
+        //     .write_all(&(init_pid.as_raw()).to_be_bytes())?;
         Ok(())
     }
 
     fn write_message_for_parent(&mut self, msg: Message) -> Result<()> {
+        // self.sender_for_parent
+        //     .write_all(&(msg as u8).to_be_bytes())?;
         self.sender_for_parent
-            .write_all(&(msg as u8).to_be_bytes())?;
+            .write_all(msg.to_string().as_bytes())?;
         Ok(())
     }
 
@@ -68,15 +70,21 @@ impl ChildProcess {
             .expect("Complete the setup of uds in advance.");
 
         let mut events = Events::with_capacity(128);
-        poll.poll(&mut events, Some(Duration::from_millis(1000)))?;
+        poll.poll(&mut events, Some(Duration::from_secs(2)))?;
         for event in events.iter() {
             if let CHILD = event.token() {
-                let mut buf = [0; 1];
+                let mut buf = [0; 9];
                 receiver.read_exact(&mut buf)?;
-                match Message::from(u8::from_be_bytes(buf)) {
-                    Message::InitReady => return Ok(()),
+                // match std::str::from_utf8(&buf)? {
+                match String::from_utf8_lossy(&buf).to_string().as_str() {
+                    "InitReady" => return Ok(()),
+                    // Message::InitReady.to_string() => return Ok(),
                     msg => bail!("receive unexpected message {:?} in child process", msg),
                 }
+                // match Message::from(u8::from_be_bytes(buf)) {
+                //     Message::InitReady => return Ok(()),
+                //     msg => bail!("receive unexpected message {:?} in child process", msg),
+                // }
             } else {
                 unreachable!()
             }
