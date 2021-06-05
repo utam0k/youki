@@ -35,6 +35,7 @@ impl ParentProcess {
                 // self.receiver.read_to_end(&mut buf)?;
                 if let Err(e) = self.receiver.read_to_end(&mut buf) {
                     if e.kind() == std::io::ErrorKind::WouldBlock {
+                        log::warn!("would block");
                         // let message = String::from_utf8_lossy(&buf).to_string();
                         // eprintln!("retry because of WouldBlock: {}", message);
                         // bail!("aa")
