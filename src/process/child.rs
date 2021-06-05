@@ -44,6 +44,8 @@ impl ChildProcess {
             (Message::ChildReady as u8).to_be_bytes()
         );
         self.write_message_for_parent(Message::ChildReady)?;
+
+        log::debug!("child send to parent {:?}", init_pid.as_raw().to_be_bytes(),);
         self.sender_for_parent
             .write_all(&(init_pid.as_raw()).to_be_bytes())?;
         Ok(())
