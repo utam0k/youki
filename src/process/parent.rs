@@ -34,7 +34,7 @@ impl ParentProcess {
                 log::debug!("receive a message from child: {:?}", buf);
                 match Message::from(u8::from_be_bytes(buf)) {
                     Message::ChildReady => {
-                        let mut buf = [0; 4];
+                        let mut buf = [0; 8];
                         self.receiver.read_exact(&mut buf)?;
                         log::debug!("receive a message from child: {:?}", buf);
                         return Ok(i32::from_be_bytes(buf));
