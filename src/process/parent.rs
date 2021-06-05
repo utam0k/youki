@@ -16,6 +16,8 @@ pub struct ParentProcess {
 impl ParentProcess {
     pub fn new() -> Result<(Self, Sender)> {
         let (sender, mut receiver) = pipe::new()?;
+        sender.set_nonblocking(true)?;
+        receiver.set_nonblocking(true)?;
         let poll = Poll::new()?;
         poll.registry()
             .register(&mut receiver, PARENT, Interest::READABLE)?;
