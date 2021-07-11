@@ -29,10 +29,13 @@ jobs:
           args: --all-features
       - name: Build
         run: ./build.sh
-      - name: Run tests
-        run: cargo test
-      - name: Run doc tests
-        run: cargo test --doc
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --doc
   integration_tests:
     runs-on: ubuntu-latest
     steps:
