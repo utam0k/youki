@@ -102,6 +102,8 @@ mod tests {
             kernel: None,
             kernel_tcp: None,
             swappiness: None,
+            disable_oom_killer: None,
+            use_hierarchy: None,
         };
         Memory::apply(&tmp, memory_limits).expect("apply memory limits");
 
@@ -131,6 +133,8 @@ mod tests {
             kernel: None,
             kernel_tcp: None,
             swappiness: None,
+            disable_oom_killer: None,
+            use_hierarchy: None,
         };
         Memory::apply(&tmp, memory_limits).expect("apply memory limits");
 
@@ -156,6 +160,8 @@ mod tests {
             kernel: None,
             kernel_tcp: None,
             swappiness: None,
+            disable_oom_killer: None,
+            use_hierarchy: None,
         };
 
         let result = Memory::apply(&tmp, memory_limits);
@@ -177,6 +183,8 @@ mod tests {
             kernel: None,
             kernel_tcp: None,
             swappiness: None,
+            disable_oom_killer: None,
+            use_hierarchy: None,
         };
 
         let result = Memory::apply(&tmp, memory_limits);
@@ -198,6 +206,8 @@ mod tests {
             kernel: None,
             kernel_tcp: None,
             swappiness: None,
+            disable_oom_killer: None,
+            use_hierarchy: None,
         };
 
         let result = Memory::apply(&tmp, memory_limits);
