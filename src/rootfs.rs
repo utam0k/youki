@@ -23,16 +23,15 @@ pub fn prepare_rootfs(spec: &Spec, rootfs: &Path, bind_devices: bool) -> Result<
     let mut flags = MsFlags::MS_REC;
 
     let linux = spec.linux.as_ref().context("no linux in spec")?;
-    match linux
-        .rootfs_propagation
-        .as_ref()
-        .context("no rootfs_propagation in spec")?
-        .as_str()
-    {
-        "shared" => flags |= MsFlags::MS_SHARED,
-        "private" => flags |= MsFlags::MS_PRIVATE,
-        "slave" | "" => flags |= MsFlags::MS_SLAVE,
-        _ => panic!(),
+    if let Some(roofs_propagation) = linux.rootfs_propagation.as_ref() {
+        match roofs_propagation.as_str() {
+            "shared" => flags |= MsFlags::MS_SHARED,
+            "private" => flags |= MsFlags::MS_PRIVATE,
+            "slave" => flags |= MsFlags::MS_SLAVE,
+            uknown => bail!("unknown rootfs_propagation: {}", uknown),
+        }
+    } else {
+        flags |= MsFlags::MS_SLAVE;
     }
 
     nix_mount(None::<&str>, "/", None::<&str>, flags, None::<&str>)?;
@@ -46,19 +45,18 @@ pub fn prepare_rootfs(spec: &Spec, rootfs: &Path, bind_devices: bool) -> Result<
         None::<&str>,
     )?;
 
-    for m in spec.mounts.as_ref().context("no mounts in spec")?.iter() {
-        let (flags, data) = parse_mount(m);
-        let ml = linux
-            .mount_label
-            .as_ref()
-            .context("no mount_label in spec")?;
-        if m.typ.as_ref().context("no type in mount spec")? == "cgroup" {
-            // skip
-            log::warn!("A feature of cgroup is unimplemented.");
-        } else if m.destination == PathBuf::from("/dev") {
-            mount_to_container(m, rootfs, flags & !MsFlags::MS_RDONLY, &data, ml)?;
-        } else {
-            mount_to_container(m, rootfs, flags, &data, ml)?;
+    if let Some(mounts) = spec.mounts.as_ref() {
+        for m in mounts.iter() {
+            let (flags, data) = parse_mount(m);
+            let ml = linux.mount_label.as_ref();
+            if m.typ.as_ref().context("no type in mount spec")? == "cgroup" {
+                // skip
+                log::warn!("A feature of cgroup is unimplemented.");
+            } else if m.destination == PathBuf::from("/dev") {
+                mount_to_container(m, rootfs, flags & !MsFlags::MS_RDONLY, &data, ml)?;
+            } else {
+                mount_to_container(m, rootfs, flags, &data, ml)?;
+            }
         }
     }
 
@@ -66,10 +64,9 @@ pub fn prepare_rootfs(spec: &Spec, rootfs: &Path, bind_devices: bool) -> Result<
     chdir(rootfs)?;
 
     setup_default_symlinks(rootfs)?;
-    create_devices(
-        linux.devices.as_ref().context("no devices in spec")?,
-        bind_devices,
-    )?;
+    if let Some(devices) = linux.devices.as_ref() {
+        create_devices(devices, bind_devices)?;
+    }
     setup_ptmx(rootfs)?;
 
     chdir(&olddir)?;
@@ -236,14 +233,18 @@ fn mount_to_container(
     rootfs: &Path,
     flags: MsFlags,
     data: &str,
-    label: &str,
+    label: Option<&String>,
 ) -> Result<()> {
     let typ = m.typ.as_ref().context("no type in mount spec")?;
-    let d = if !label.is_empty() && typ != "proc" && typ != "sysfs" {
-        if data.is_empty() {
-            format!("context=\"{}\"", label)
+    let d = if let Some(l) = label {
+        if typ != "proc" && typ != "sysfs" {
+            if data.is_empty() {
+                format!("context=\"{}\"", l)
+            } else {
+                format!("{},context=\"{}\"", data, l)
+            }
         } else {
-            format!("{},context=\"{}\"", data, label)
+            data.to_string()
         }
     } else {
         data.to_string()
