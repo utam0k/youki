@@ -107,6 +107,24 @@ impl StatsProvider for Blkio {
 
 impl Blkio {
     fn apply(root_path: &Path, blkio: &LinuxBlockIo) -> Result<()> {
+        if let Some(weight_devices) = blkio.weight_device.as_ref() {
+            for weight_device in weight_devices {
+                if let Some(weight) = weight_device.weight {
+                    common::write_cgroup_file_str(
+                        &root_path.join(BLKIO_WEIGHT_DEVICE),
+                        &format!("{}:{} {}", weight_device.major, weight_device.minor, weight),
+                    )?;
+                } else if let Some(leaf_weight) = weight_device.leaf_weight {
+                    common::write_cgroup_file_str(
+                        &root_path.join(BLKIO_WEIGHT_DEVICE),
+                        &format!(
+                            "{}:{} {}",
+                            weight_device.major, weight_device.minor, leaf_weight
+                        ),
+                    )?;
+                }
+            }
+        }
         if let Some(throttle_read_bps_device) = blkio.throttle_read_bps_device.as_ref() {
             for trbd in throttle_read_bps_device {
                 common::write_cgroup_file_str(
