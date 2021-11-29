@@ -21,7 +21,7 @@ jobs:
             ./crates/libcontainer: crates/libcontainer/**
             ./crates/libcgroups: crates/libcgroups/**
             ./crates/libseccomp: crates/libseccomp/**
-            ./crates/integration_test: crates/integration_test/**        
+            ./crates/integration_test: crates/integration_test/**
   check:
     needs: [changes]
     if: ${{ !contains(needs.changes.outputs.dirs, '[]') }}
@@ -84,10 +84,7 @@ jobs:
         run: |
           wget https://github.com/taiki-e/cargo-llvm-cov/releases/download/v${CARGO_LLVM_COV_VERSION}/cargo-llvm-cov-x86_64-unknown-linux-gnu.tar.gz -qO- | tar -xzvf -
           mv cargo-llvm-cov ~/.cargo/bin
-      - name: Update System Libraries
-        run: sudo apt-get -y update
-      - name: Install System Libraries
-        run: sudo apt-get install -y pkg-config libsystemd-dev libdbus-glib-1-dev libelf-dev libseccomp-dev
+      - uses: utam0k/youki/.github/workflows/resolving_youki_dependencies.yml@dad505222a3954cdaea3388e8d8fca7d9e6c6e16
       - name: Run Test Coverage for youki
         run: |
           cargo llvm-cov clean --workspace
@@ -123,6 +120,6 @@ jobs:
         run: ./build.sh --release
       - uses: actions/setup-go@v2
         with:
-          go-version: '1.11.0'
+          go-version: "1.11.0"
       - name: Run integration tests
         run: ./integration_test.sh
