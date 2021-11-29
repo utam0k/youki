@@ -5,7 +5,7 @@ mod commands;
 mod logger;
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use anyhow::bail;
 use anyhow::Context;
@@ -112,6 +112,11 @@ fn main() -> Result<()> {
         eprintln!("log init failed: {:?}", e);
     }
 
+    log::debug!(
+        "started by user {} with {:?}",
+        nix::unistd::geteuid(),
+        std::env::args_os()
+    );
     let root_path = determine_root_path(opts.root)?;
     let systemd_cgroup = opts.systemd_cgroup;
 
@@ -145,15 +150,18 @@ fn determine_root_path(root_path: Option<PathBuf>) -> Result<PathBuf> {
     }
 
     // see https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+    let uid = getuid().as_raw();
     if let Ok(path) = std::env::var("XDG_RUNTIME_DIR") {
-        return Ok(PathBuf::from(path));
+        let path = Path::new(&path).join("youki");
+        if create_dir_all_with_mode(&path, uid, Mode::S_IRWXU).is_ok() {
+            return Ok(path);
+        }
     }
 
     // XDG_RUNTIME_DIR is not set, try the usual location
-    let uid = getuid().as_raw();
-    let runtime_dir = PathBuf::from(format!("/run/user/{}", uid));
-    if create_dir_all_with_mode(&runtime_dir, uid, Mode::S_IRWXU).is_ok() {
-        return Ok(runtime_dir);
+    let path = PathBuf::from(format!("/run/user/{}/youki", uid));
+    if create_dir_all_with_mode(&path, uid, Mode::S_IRWXU).is_ok() {
+        return Ok(path);
     }
 
     if let Ok(path) = std::env::var("HOME") {
@@ -165,7 +173,7 @@ fn determine_root_path(root_path: Option<PathBuf>) -> Result<PathBuf> {
         }
     }
 
-    let tmp_dir = PathBuf::from(format!("/tmp/youki/{}", uid));
+    let tmp_dir = PathBuf::from(format!("/tmp/youki-{}", uid));
     if create_dir_all_with_mode(&tmp_dir, uid, Mode::S_IRWXU).is_ok() {
         return Ok(tmp_dir);
     }
