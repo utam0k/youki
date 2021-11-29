@@ -1,0 +1,9 @@
+on:
+  workflow_call:
+
+jobs:
+  youki_dependencies:
+    - name: Update System Libraries
+      run: sudo apt-get -y update
+    - name: Install System Libraries
+      run: sudo apt-get install -y pkg-config libsystemd-dev libdbus-glib-1-dev libelf-dev libseccomp-dev
