@@ -176,7 +176,7 @@ youki is named after the Japanese word 'youki', which means 'a container'. In Ja
 </li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="user-documentation"><a class="header" href="#user-documentation">User Documentation</a></h1>
-<p>THis section provides documentation of youki and the sub crates that the youki repo contains for the users. So if you are using youki as a low level container runtime, or using any of the crates in youki workspace as dependencies for your own project, this section might be helpful for you.</p>
+<p>This section provides documentation of youki and the sub crates that the youki repo contains for the users. So if you are using youki as a low level container runtime, or using any of the crates in youki workspace as dependencies for your own project, this section might be helpful for you.</p>
 <p>This is divided into following sub-sections :</p>
 <ul>
 <li>Basic Setup : This explains how the dependencies and setup required to compile and run youki</li>
@@ -431,7 +431,7 @@ sudo ./youki delete tutorial_container
 </li>
 </ul>
 <h3 id="systemd"><a class="header" href="#systemd">systemd</a></h3>
-<p>THis is the module used by youki to interact with sytemd, and it exposes several functions to interact</p>
+<p>This is the module used by youki to interact with sytemd, and it exposes several functions to interact</p>
 <ul>
 <li>
 <p>function <code>booted</code> to check if the system was booted with systemd or not</p>
@@ -449,7 +449,7 @@ sudo ./youki delete tutorial_container
 <p>These two modules contains functionalities specific to cgroups version 1 and version 2. Both of these expose respective cgroup managers, which can be used to manage that type of cgroup, as well as sme utility functions related to respective cgroup version, such as <code>get_mount_points</code> (for v1 and v2), <code>get_subsystem_mount points (for v1) and </code>get_available_controllers` (for v2) etc.</p>
 <p>The v2 module also exposes devices module, which gives functionality for working with bpf ; such as load a bpf program, query info of a bpf program, attach and detach a bpf program to a cgroup, etc.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="libcontainer"><a class="header" href="#libcontainer">libcontainer</a></h1>
-<p>THis crate provides functionality for creating and managing containers. Youki itself uses this crate to manage and control the containers.</p>
+<p>This crate provides functionality for creating and managing containers. Youki itself uses this crate to manage and control the containers.</p>
 <p>This exposes several modules, each dealing with a specific aspect of working with containers.</p>
 <ul>
 <li>
@@ -578,16 +578,20 @@ sudo ./youki delete tutorial_container
 <div style="break-before: page; page-break-before: always;"></div><h1 id="this-documentation"><a class="header" href="#this-documentation">This Documentation</a></h1>
 <p>This documentation is created using mdbook and aims to provide a concise reference for users and developers of youki. For more information on mdbook itself, you can check out the <a href="https://rust-lang.github.io/mdBook/">mdbook documentation</a>.</p>
 <p>Please make sure that you update this documentation along with newly added features and resources that you found helpful while developing, so that it will be helpful for newcomers.</p>
-<p>TODO, update after deciding the final way to host the mdbook
-To compile and deploy this mdbook follow the instructions</p>
-<pre><code>git worktree add /tmp/book -b gh-pages
+<p>Currently this documentation is hosted at <a href="https://containers.github.io/youki/">https://containers.github.io/youki/</a>, using GitHub pages. GitHub CI actions are used to automatically check if any files are changed in /docs on each push / PR merge to main branch, and if there are any changes, the mdbook is build and deployed to gh-pages. We use <a href="https://github.com/peaceiris/actions-mdbook">https://github.com/peaceiris/actions-mdbook</a> to build and then <a href="https://github.com/peaceiris/actions-gh-pages">https://github.com/peaceiris/actions-gh-pages</a> GitHub action to deploy the mdbook.</p>
+<p>When testing locally you can manually test the changes by running <code>mdbook serve</code> in the docs directory (after installing mdbook), which will temporarily serve the mdbook at <code>localhost:3000</code> by default. You can check the mdbook documentation for more information.</p>
+<p>If you want to test it using gh-pages on your own fork, you can use following steps in the docs directory.</p>
+<pre><code class="language-console">git worktree prune
+# Do this if you are running this command first time after booting,
+# As after shutdown /tmp files are removed
+git branch -D gh-pages &amp;&amp; git worktree add /tmp/book -b gh-pages
 mdbook build
 rm -rf /tmp/book/* # this won't delete the .git directory
 cp -rp book/* /tmp/book/
 cd /tmp/book
 git add -A
 git commit 'new book message'
-git push origin gh-pages
+git push -f origin gh-pages
 cd -
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="crate-specific-information"><a class="header" href="#crate-specific-information">Crate Specific Information</a></h1>
@@ -629,7 +633,7 @@ cd -
 </ul>
 <p>As youki currently depends on systemd as an init system, this crate also exposes module systemd, which provides interface for working with systemd related operations. <a href="https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html">systemd resource control</a> is a good place to read more about systemd and its involvement in resource control.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="libcontainer-1"><a class="header" href="#libcontainer-1">libcontainer</a></h1>
-<p>THis crate is one of the core crates of the youki workspace, and has functions and structs that deal with the actual craetion and management of the container processes.</p>
+<p>This crate is one of the core crates of the youki workspace, and has functions and structs that deal with the actual craetion and management of the container processes.</p>
 <p>Remember, in the end, a container is just another process in Linux, which has control groups, namespaces, pivot_root and other mechanisms applied to it. The program executing has the impression that is is running on a complete system, but from the host system's perspective, it is just another process, and has attributes such as pid, file descriptors, etc. associated with it like any other process.</p>
 <p>Along with the container related functions, this crate also provides Youki Config, a subset of the OCI spec config. This config contains only the essential data required for running the containers, and due to its smaller size, parsing it and passing it around is more efficient than the complete OCI spec config struct.</p>
 <p>Other than that, this crate also provides a wrapper over basic Linux sockets, which are then used internally as well as by youki to communicate between the main youki process and the forked container process as well as the intermediate process.</p>
