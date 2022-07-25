@@ -14,7 +14,6 @@ pub fn container_intermediate_process(
     intermediate_chan: &mut (channel::IntermediateSender, channel::IntermediateReceiver),
     init_chan: &mut (channel::InitSender, channel::InitReceiver),
     main_sender: &mut channel::MainSender,
-    fifo_fd: i32,
 ) -> Result<()> {
     let (inter_sender, inter_receiver) = intermediate_chan;
     let (init_sender, init_receiver) = init_chan;
@@ -96,7 +95,7 @@ pub fn container_intermediate_process(
         inter_sender
             .close()
             .context("failed to close sender in the intermediate process")?;
-        container_init_process(args, main_sender, init_receiver, fifo_fd)
+        container_init_process(args, main_sender, init_receiver)
     })?;
     // Once we fork the container init process, the job for intermediate process
     // is done. We notify the container main process about the pid we just
