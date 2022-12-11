@@ -91,6 +91,7 @@ impl<'a> InitContainerBuilder<'a> {
             container: Some(container.clone()),
             preserve_fds: self.base.preserve_fds,
             detached: false, // TODO this should be set properly based on how the command is given
+            executor_manager: self.base.executor_manager,
         };
 
         builder_impl.create()?;

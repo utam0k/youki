@@ -1661,11 +1661,6 @@ dependencies = [
  "serde_json",
  "serial_test",
  "syscalls",
- "wasmedge-sdk",
- "wasmer",
- "wasmer-wasi",
- "wasmtime",
- "wasmtime-wasi",
 ]
 
 [[package]]
@@ -4274,6 +4269,11 @@ dependencies = [
  "serial_test",
  "tabwriter",
  "vergen",
+ "wasmedge-sdk",
+ "wasmer",
+ "wasmer-wasi",
+ "wasmtime",
+ "wasmtime-wasi",
 ]
 
 [[package]]
