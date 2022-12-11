@@ -109,7 +109,7 @@ pub fn container_intermediate_process(
         }
     })?;
 
-    // close the  exec_notify_fd in this process
+    // close the exec_notify_fd in this process
     if let ContainerType::TenantContainer { exec_notify_fd } = args.container_type {
         close(exec_notify_fd)?;
     }
