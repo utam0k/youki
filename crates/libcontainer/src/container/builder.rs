@@ -242,7 +242,7 @@ mod tests {
         ContainerBuilder::new(
             "74f1a4cb3801".to_owned(),
             syscall.as_ref(),
-            vec![Box::new(DefaultExecutor::default())],
+            vec![Box::<DefaultExecutor>::default()],
         )
         .with_root_path(root_path_temp_dir.path())?
         .with_pid_file(Some(pid_file_temp_dir.path()))?
@@ -253,7 +253,7 @@ mod tests {
         ContainerBuilder::new(
             "74f1a4cb3801".to_owned(),
             syscall.as_ref(),
-            vec![Box::new(DefaultExecutor::default())],
+            vec![Box::<DefaultExecutor>::default()],
         )
         .with_pid_file::<PathBuf>(None)?;
 
@@ -262,7 +262,7 @@ mod tests {
         let path_builder = ContainerBuilder::new(
             "74f1a4cb3801".to_owned(),
             syscall.as_ref(),
-            vec![Box::new(DefaultExecutor::default())],
+            vec![Box::<DefaultExecutor>::default()],
         )
         .with_root_path(&abs_root_path)
         .context("build container")?;
@@ -273,7 +273,7 @@ mod tests {
         let path_builder = ContainerBuilder::new(
             "74f1a4cb3801".to_owned(),
             syscall.as_ref(),
-            vec![Box::new(DefaultExecutor::default())],
+            vec![Box::<DefaultExecutor>::default()],
         )
         .with_root_path("./not/existing/path")
         .context("build container")?;
@@ -284,7 +284,7 @@ mod tests {
         let path_builder = ContainerBuilder::new(
             "74f1a4cb3801".to_owned(),
             syscall.as_ref(),
-            vec![Box::new(DefaultExecutor::default())],
+            vec![Box::<DefaultExecutor>::default()],
         )
         .with_pid_file(Some(&abs_pid_path))
         .context("build container")?;
@@ -295,7 +295,7 @@ mod tests {
         let path_builder = ContainerBuilder::new(
             "74f1a4cb3801".to_owned(),
             syscall.as_ref(),
-            vec![Box::new(DefaultExecutor::default())],
+            vec![Box::<DefaultExecutor>::default()],
         )
         .with_pid_file(Some("./not/existing/path"))
         .context("build container")?;
