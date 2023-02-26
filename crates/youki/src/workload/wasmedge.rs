@@ -38,7 +38,7 @@ impl Executor for WasmEdgeExecutor {
             None,
         );
 
-        let mut vm = vm.register_module_from_file("main", &cmd)?;
+        let mut vm = vm.register_module_from_file("main", cmd)?;
 
         let ins = vm.named_module("main")?;
         ins.func("_start")

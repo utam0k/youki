@@ -62,7 +62,7 @@ fn setup_network_namespace(project_path: &Path, id: &str) -> Result<(), TestResu
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .arg("-t")
-        .arg(format!("{}", pid))
+        .arg(format!("{pid}"))
         .arg("-a")
         .args(vec!["/bin/ip", "link", "set", "up", "dev", "lo"])
         .spawn()
@@ -140,6 +140,13 @@ fn checkpoint(
     if !Path::new(&checkpoint_dir.join("inventory.img")).exists() {
         return TestResult::Failed(anyhow::anyhow!(
             "resulting checkpoint does not seem to be complete. {:?}/inventory.img is missing",
+            &checkpoint_dir,
+        ));
+    }
+
+    if !Path::new(&checkpoint_dir.join("descriptors.json")).exists() {
+        return TestResult::Failed(anyhow::anyhow!(
+            "resulting checkpoint does not seem to be complete. {:?}/descriptors.json is missing",
             &checkpoint_dir,
         ));
     }

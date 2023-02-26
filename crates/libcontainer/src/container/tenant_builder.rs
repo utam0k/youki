@@ -14,6 +14,7 @@ use std::{
     convert::TryFrom,
     ffi::{OsStr, OsString},
     fs,
+    io::BufReader,
     os::unix::prelude::RawFd,
     path::{Path, PathBuf},
     str::FromStr,
@@ -185,7 +186,7 @@ impl<'a> TenantContainerBuilder<'a> {
         let spec_path = container.bundle().join("config.json");
 
         let mut spec = Spec::load(&spec_path)
-            .with_context(|| format!("failed to load spec from {:?}", spec_path))?;
+            .with_context(|| format!("failed to load spec from {spec_path:?}"))?;
 
         spec.canonicalize_rootfs(container.bundle())
             .context("failed to canonicalize rootfs")?;
@@ -247,7 +248,8 @@ impl<'a> TenantContainerBuilder<'a> {
         }
 
         let process = utils::open(process)?;
-        let process_spec = serde_json::from_reader(process)?;
+        let reader = BufReader::new(process);
+        let process_spec = serde_json::from_reader(reader)?;
         Ok(process_spec)
     }
 
@@ -273,11 +275,7 @@ impl<'a> TenantContainerBuilder<'a> {
     }
 
     fn get_environment(&self) -> Result<Vec<String>> {
-        Ok(self
-            .env
-            .iter()
-            .map(|(k, v)| format!("{}={}", k, v))
-            .collect())
+        Ok(self.env.iter().map(|(k, v)| format!("{k}={v}")).collect())
     }
 
     fn get_no_new_privileges(&self) -> Option<bool> {
@@ -387,7 +385,7 @@ impl<'a> TenantContainerBuilder<'a> {
 
     fn setup_notify_listener(container_dir: &Path) -> Result<PathBuf> {
         let notify_name = Self::generate_name(container_dir, TENANT_NOTIFY);
-        let socket_path = container_dir.join(&notify_name);
+        let socket_path = container_dir.join(notify_name);
 
         Ok(socket_path)
     }
@@ -410,7 +408,7 @@ impl<'a> TenantContainerBuilder<'a> {
     fn generate_name(dir: &Path, prefix: &str) -> String {
         loop {
             let rand = fastrand::i32(..);
-            let name = format!("{}{:x}.sock", prefix, rand);
+            let name = format!("{prefix}{rand:x}.sock");
             if !dir.join(&name).exists() {
                 return name;
             }

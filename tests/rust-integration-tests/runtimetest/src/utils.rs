@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::process::Command;
 
 use nix::sys::stat::stat;
 use nix::sys::stat::SFlag;
@@ -39,10 +40,7 @@ pub fn test_read_access(path: &str) -> Result<(), std::io::Error> {
 
     Err(std::io::Error::new(
         std::io::ErrorKind::Other,
-        format!(
-            "cannot test read access for {:?}, has mode {:x}",
-            path, mode
-        ),
+        format!("cannot test read access for {path:?}, has mode {mode:x}"),
     ))
 }
 
@@ -71,9 +69,19 @@ pub fn test_write_access(path: &str) -> Result<(), std::io::Error> {
 
     Err(std::io::Error::new(
         std::io::ErrorKind::Other,
-        format!(
-            "cannot test write access for {:?}, has mode {:x}",
-            path, mode
-        ),
+        format!("cannot test write access for {path:?}, has mode {mode:x}"),
+    ))
+}
+
+pub fn test_file_executable(path: &str) -> Result<(), std::io::Error> {
+    let fstat = stat(path)?;
+    let mode = fstat.st_mode;
+    if is_file_like(mode) {
+        Command::new(path).output()?;
+    }
+
+    Err(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        format!("{path:?} is directory, so cannot execute"),
     ))
 }

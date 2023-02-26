@@ -5,7 +5,7 @@ use crate::{
     capabilities, hooks, namespaces::Namespaces, process::channel, rootfs::RootFS,
     rootless::Rootless, seccomp, tty, utils,
 };
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Context, Ok, Result};
 use nix::mount::MsFlags;
 use nix::sched::CloneFlags;
 use nix::sys::stat::Mode;
@@ -30,7 +30,7 @@ fn sysctl(kernel_params: &HashMap<String, String>) -> Result<()> {
             kernel_param
         );
         fs::write(path, value.as_bytes())
-            .with_context(|| format!("failed to set sysctl {}={}", kernel_param, value))?;
+            .with_context(|| format!("failed to set sysctl {kernel_param}={value}"))?;
     }
 
     Ok(())
@@ -89,7 +89,7 @@ fn masked_path(path: &Path, mount_label: &Option<String>, syscall: &dyn Syscall)
                 log::warn!("masked path {:?} not exist", path);
             } else if matches!(errno, nix::errno::Errno::ENOTDIR) {
                 let label = match mount_label {
-                    Some(l) => format!("context=\"{}\"", l),
+                    Some(l) => format!("context=\"{l}\""),
                     None => "".to_string(),
                 };
                 syscall.mount(
@@ -212,11 +212,11 @@ pub fn container_init_process(
             // change the root of filesystem of the process to the rootfs
             syscall
                 .pivot_rootfs(rootfs_path)
-                .with_context(|| format!("failed to pivot root to {:?}", rootfs_path))?;
+                .with_context(|| format!("failed to pivot root to {rootfs_path:?}"))?;
         } else {
             syscall
                 .chroot(rootfs_path)
-                .with_context(|| format!("failed to chroot to {:?}", rootfs_path))?;
+                .with_context(|| format!("failed to chroot to {rootfs_path:?}"))?;
         }
 
         rootfs
@@ -227,13 +227,13 @@ pub fn container_init_process(
 
         if let Some(kernel_params) = linux.sysctl() {
             sysctl(kernel_params)
-                .with_context(|| format!("failed to sysctl: {:?}", kernel_params))?;
+                .with_context(|| format!("failed to sysctl: {kernel_params:?}"))?;
         }
     }
 
     if let Some(profile) = proc.apparmor_profile() {
         apparmor::apply_profile(profile)
-            .with_context(|| format!("failed to apply apparmor profile {}", profile))?;
+            .with_context(|| format!("failed to apply apparmor profile {profile}"))?;
     }
 
     if let Some(true) = spec.root().as_ref().map(|r| r.readonly().unwrap_or(false)) {
@@ -258,7 +258,7 @@ pub fn container_init_process(
         // mount readonly path
         for path in paths {
             readonly_path(Path::new(path), syscall)
-                .with_context(|| format!("failed to set read only path {:?}", path))?;
+                .with_context(|| format!("failed to set read only path {path:?}"))?;
         }
     }
 
@@ -266,7 +266,7 @@ pub fn container_init_process(
         // mount masked path
         for path in paths {
             masked_path(Path::new(path), linux.mount_label(), syscall)
-                .with_context(|| format!("failed to set masked path {:?}", path))?;
+                .with_context(|| format!("failed to set masked path {path:?}"))?;
         }
     }
 
@@ -278,7 +278,7 @@ pub fn container_init_process(
         // This may allow the user running youki to access directories
         // that the container user cannot access.
         match unistd::chdir(proc.cwd()) {
-            Ok(_) => false,
+            std::result::Result::Ok(_) => false,
             Err(nix::Error::EPERM) => true,
             Err(e) => bail!("failed to chdir: {}", e),
         }
@@ -298,9 +298,9 @@ pub fn container_init_process(
     // not 0, then we have to preserve those fds as well, and set up the correct
     // environment variables.
     let preserve_fds: i32 = match env::var("LISTEN_FDS") {
-        Ok(listen_fds_str) => {
+        std::result::Result::Ok(listen_fds_str) => {
             let listen_fds = match listen_fds_str.parse::<i32>() {
-                Ok(v) => v,
+                std::result::Result::Ok(v) => v,
                 Err(error) => {
                     log::warn!(
                         "LISTEN_FDS entered is not a fd. Ignore the value. {:?}",
@@ -317,7 +317,7 @@ pub fn container_init_process(
             // it here, if it is 0.
             if listen_fds > 0 {
                 envs.append(&mut vec![
-                    format!("LISTEN_FDS={}", listen_fds),
+                    format!("LISTEN_FDS={listen_fds}"),
                     "LISTEN_PID=1".to_string(),
                 ]);
             }
@@ -496,12 +496,12 @@ fn set_supplementary_gids(
         match rootless {
             Some(r) if r.privileged => {
                 syscall.set_groups(&gids).with_context(|| {
-                    format!("failed to set privileged supplementary gids: {:?}", gids)
+                    format!("failed to set privileged supplementary gids: {gids:?}")
                 })?;
             }
             None => {
                 syscall.set_groups(&gids).with_context(|| {
-                    format!("failed to set unprivileged supplementary gids: {:?}", gids)
+                    format!("failed to set unprivileged supplementary gids: {gids:?}")
                 })?;
             }
             // this should have been detected during validation

@@ -159,10 +159,7 @@ fn sync_seccomp_send_msg(listener_path: &Path, msg: &[u8], fd: i32) -> Result<()
     .context("failed to create unix domain socket for seccomp listener")?;
     let unix_addr = socket::UnixAddr::new(listener_path).context("failed to create unix addr")?;
     socket::connect(socket, &unix_addr).with_context(|| {
-        format!(
-            "failed to connect to seccomp notify listerner path: {:?}",
-            listener_path
-        )
+        format!("failed to connect to seccomp notify listerner path: {listener_path:?}")
     })?;
     // We have to use sendmsg here because the spec requires us to send seccomp notify fds through
     // SCM_RIGHTS message.
@@ -184,15 +181,15 @@ fn setup_mapping(rootless: &Rootless, pid: Pid) -> Result<()> {
     if !rootless.privileged {
         // The main process is running as an unprivileged user and cannot write the mapping
         // until "deny" has been written to setgroups. See CVE-2014-8989.
-        utils::write_file(format!("/proc/{}/setgroups", pid), "deny")?;
+        utils::write_file(format!("/proc/{pid}/setgroups"), "deny")?;
     }
 
     rootless
         .write_uid_mapping(pid)
-        .context(format!("failed to map uid of pid {}", pid))?;
+        .context(format!("failed to map uid of pid {pid}"))?;
     rootless
         .write_gid_mapping(pid)
-        .context(format!("failed to map gid of pid {}", pid))?;
+        .context(format!("failed to map gid of pid {pid}"))?;
     Ok(())
 }
 
@@ -240,7 +237,7 @@ mod tests {
 
                 let tempdir = TempDir::new(get_gid_path(&child).parent().unwrap())?;
                 let gid_map_path = tempdir.join("gid_map");
-                let _ = fs::File::create(&gid_map_path)?;
+                let _ = fs::File::create(gid_map_path)?;
 
                 setup_mapping(&rootless, child)?;
                 let line = fs::read_to_string(uid_map_path)?;
@@ -290,7 +287,7 @@ mod tests {
 
                 let tempdir = TempDir::new(get_uid_path(&child).parent().unwrap())?;
                 let uid_map_path = tempdir.join("uid_map");
-                let _ = fs::File::create(&uid_map_path)?;
+                let _ = fs::File::create(uid_map_path)?;
 
                 let tempdir = TempDir::new(get_gid_path(&child).parent().unwrap())?;
                 let gid_map_path = tempdir.join("gid_map");

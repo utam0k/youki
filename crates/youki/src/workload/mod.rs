@@ -3,3 +3,5 @@ pub mod executor;
 mod wasmedge;
 #[cfg(feature = "wasm-wasmer")]
 mod wasmer;
+#[cfg(feature = "wasm-wasmtime")]
+mod wasmtime;

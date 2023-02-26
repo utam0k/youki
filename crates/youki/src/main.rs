@@ -8,7 +8,7 @@ mod workload;
 use anyhow::bail;
 use anyhow::Context;
 use anyhow::Result;
-use clap::IntoApp;
+use clap::CommandFactory;
 use clap::{crate_version, Parser};
 use nix::libc;
 use std::fs;
@@ -87,7 +87,7 @@ fn main() -> Result<()> {
 
     if let Err(e) = crate::logger::init(opts.global.debug, opts.global.log, opts.global.log_format)
     {
-        eprintln!("log init failed: {:?}", e);
+        eprintln!("log init failed: {e:?}");
     }
 
     log::debug!(
@@ -116,7 +116,7 @@ fn main() -> Result<()> {
             CommonCmd::Exec(exec) => match commands::exec::exec(exec, root_path) {
                 Ok(exit_code) => std::process::exit(exit_code),
                 Err(e) => {
-                    eprintln!("exec failed : {}", e);
+                    eprintln!("exec failed : {e}");
                     std::process::exit(-1);
                 }
             },
@@ -181,7 +181,7 @@ fn determine_root_path(root_path: Option<PathBuf>) -> Result<PathBuf> {
         }
     }
 
-    let tmp_dir = PathBuf::from(format!("/tmp/youki-{}", uid));
+    let tmp_dir = PathBuf::from(format!("/tmp/youki-{uid}"));
     if create_dir_all_with_mode(&tmp_dir, uid, Mode::S_IRWXU).is_ok() {
         return Ok(tmp_dir);
     }
@@ -201,12 +201,12 @@ fn get_default_not_rootless_path() -> PathBuf {
 
 #[cfg(not(test))]
 fn get_default_rootless_path(uid: libc::uid_t) -> PathBuf {
-    PathBuf::from(format!("/run/user/{}/youki", uid))
+    PathBuf::from(format!("/run/user/{uid}/youki"))
 }
 
 #[cfg(test)]
 fn get_default_rootless_path(uid: libc::uid_t) -> PathBuf {
-    libcontainer::utils::get_temp_dir_path(format!("default_rootless_youki_path_{}", uid).as_str())
+    libcontainer::utils::get_temp_dir_path(format!("default_rootless_youki_path_{uid}").as_str())
 }
 
 #[cfg(test)]
@@ -282,7 +282,7 @@ mod tests {
         // Default rootless location
         let uid = getuid().as_raw();
         let default_rootless_path =
-            get_temp_dir_path(format!("default_rootless_youki_path_{}", uid).as_str());
+            get_temp_dir_path(format!("default_rootless_youki_path_{uid}").as_str());
         // Create temp dir so it gets cleaned up. This is needed as we later switch permissions of this directory.
         let _temp_dir =
             TempDir::new(&default_rootless_path).context("failed to create temp dir")?;
@@ -308,7 +308,7 @@ mod tests {
         std::env::remove_var("HOME");
 
         // Use temp dir
-        let expected_temp_path = PathBuf::from(format!("/tmp/youki-{}", uid));
+        let expected_temp_path = PathBuf::from(format!("/tmp/youki-{uid}"));
         // Create temp dir so it gets cleaned up. This is needed as we later switch permissions of this directory.
         let _temp_dir = TempDir::new(&expected_temp_path).context("failed to create temp dir")?;
         let path = determine_root_path(None).context("failed with temp path")?;

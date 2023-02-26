@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::fs;
-use std::io::BufReader;
+use std::io::{BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use std::{fs::File, path::Path};
 
@@ -68,7 +68,7 @@ impl Display for ContainerStatus {
             Self::Paused => "Paused",
         };
 
-        write!(f, "{}", print)
+        write!(f, "{print}")
     }
 }
 
@@ -132,15 +132,16 @@ impl State {
             .truncate(true)
             .open(&state_file_path)
             .with_context(|| format!("failed to open {}", state_file_path.display()))?;
-        serde_json::to_writer(&file, self)?;
+        let mut writer = BufWriter::new(file);
+        serde_json::to_writer(&mut writer, self)?;
+        writer.flush()?;
         Ok(())
     }
 
     pub fn load(container_root: &Path) -> Result<Self> {
         let state_file_path = Self::file_path(container_root);
-        let state_file = File::open(&state_file_path).with_context(|| {
-            format!("failed to open container state file {:?}", state_file_path)
-        })?;
+        let state_file = File::open(&state_file_path)
+            .with_context(|| format!("failed to open container state file {state_file_path:?}"))?;
 
         let state: Self = serde_json::from_reader(BufReader::new(state_file))?;
         Ok(state)
