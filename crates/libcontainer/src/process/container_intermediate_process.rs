@@ -1,7 +1,7 @@
 use crate::{namespaces::Namespaces, process::channel, process::fork};
 use anyhow::{Context, Error, Result};
 use libcgroups::common::CgroupManager;
-use nix::unistd::{close, write};
+use nix::unistd::{self, close, write};
 use nix::unistd::{Gid, Pid, Uid};
 use oci_spec::runtime::{LinuxNamespaceType, LinuxResources};
 use procfs::process::Process;
@@ -87,7 +87,7 @@ pub fn container_intermediate_process(
     // We have to record the pid of the child (container init process), since
     // the child will be inside the pid namespace. We can't rely on child_ready
     // to send us the correct pid.
-    let pid = fork::container_fork(|| {
+    let pid = fork::clone3(unistd::getppid(), || {
         // We are inside the forked process here. The first thing we have to do is to close
         // any unused senders, since fork will make a dup for all the socket.
         init_sender

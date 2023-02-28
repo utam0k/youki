@@ -8,6 +8,7 @@ use crate::{
     seccomp, utils,
 };
 use anyhow::{Context, Result};
+use libc::{prctl, PR_SET_CHILD_SUBREAPER};
 use nix::{
     sys::{
         socket::{self, UnixAddr},
@@ -27,6 +28,10 @@ pub fn container_main_process(container_args: &ContainerArgs) -> Result<(Pid, Pi
     let (main_sender, main_receiver) = &mut channel::main_channel()?;
     let inter_chan = &mut channel::intermediate_channel()?;
     let init_chan = &mut channel::init_channel()?;
+
+    unsafe {
+        prctl(PR_SET_CHILD_SUBREAPER, 1, 0, 0);
+    }
 
     let intermediate_pid = fork::container_fork(|| {
         let container_pid = container_intermediate_process::container_intermediate_process(
