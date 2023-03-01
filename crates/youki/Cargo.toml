@@ -21,7 +21,7 @@ wasm-wasmedge = ["libcontainer/wasm-wasmedge"]
 wasm-wasmtime = ["libcontainer/wasm-wasmtime"]
 
 [dependencies.clap]
-version = "4.1.6"
+version = "4.1.8"
 default-features = false
 features = ["std", "suggestions", "derive", "cargo", "help", "usage", "error-context"]
 
