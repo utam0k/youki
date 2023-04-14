@@ -205,9 +205,9 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "cap-fs-ext"
-version = "1.0.10"
+version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b0c86006edbaf13bbe0cdf2d7492cff638cd24cd6b717fa2aadcab09b532353"
+checksum = "80754c33c036aa2b682c4c2f6d10f43c5a9b68527e89169706027ce285b0ea30"
 dependencies = [
  "cap-primitives",
  "cap-std",
@@ -244,9 +244,9 @@ dependencies = [
 
 [[package]]
 name = "cap-std"
-version = "1.0.10"
+version = "1.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14bfc13243563bf62ee9a31b6659d2fc2bf20e75f2d3d58d87a0c420778e1399"
+checksum = "a60db4439f80165589d00673a086e9e106e224944dd09cdf5553cedfbc90fe5c"
 dependencies = [
  "cap-primitives",
  "io-extras",
