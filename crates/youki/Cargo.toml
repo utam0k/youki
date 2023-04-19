@@ -21,7 +21,7 @@ wasm-wasmedge = ["wasmedge-sdk/standalone"]
 wasm-wasmtime = ["wasmtime", "wasmtime-wasi"]
 
 [dependencies.clap]
-version = "4.1.6"
+version = "4.2.3"
 default-features = false
 features = ["std", "suggestions", "derive", "cargo", "help", "usage", "error-context"]
 
