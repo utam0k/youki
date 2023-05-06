@@ -57,8 +57,7 @@ jobs:
           runc --version
       - name: Integration Test
         run: sudo make TEST_RUNTIME=io.containerd.runc.v2 TESTFLAGS="-timeout 40m" integration
-
-  # TODO: Pass on gh actions
+  #
   # k8s-tests:
   #   runs-on: ubuntu-22.04
   #   needs: [youki-build]
