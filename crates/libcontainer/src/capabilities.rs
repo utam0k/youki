@@ -145,34 +145,153 @@ pub fn apply_bounding<S: Syscall + ?Sized>(
 pub fn apply<S: Syscall + ?Sized>(cs: &LinuxCapabilities, syscall: &S) -> Result<(), SyscallError> {
     apply_bounding(cs, syscall)?;
 
+    // if let Some(effective) = cs.effective() {
+    //     if !effective.is_empty() {
+    //         syscall.set_capability(CapSet::Effective, &to_set(effective))?;
+    //     }
+    // if let Some(effective) = cs.effective() {
+    //     if !effective.is_empty() {
+    //         syscall.set_capability(CapSet::Effective, &to_set(effective))?;
+    //     }
+    // }
+    //
+    // if let Some(permitted) = cs.permitted() {
+    //     if !permitted.is_empty() {
+    //         syscall.set_capability(CapSet::Permitted, &to_set(permitted))?;
+    //     }
+    // }
+    //
+    // if let Some(inheritable) = cs.inheritable() {
+    //     if !inheritable.is_empty() {
+    //         syscall.set_capability(CapSet::Inheritable, &to_set(inheritable))?;
+    //     }
+    // }
+    //
+    // if let Some(ambient) = cs.ambient() {
+    //     if !ambient.is_empty() {
+    //         // check specifically for ambient, as those might not always be available
+    //         if let Err(e) = syscall.set_capability(CapSet::Ambient, &to_set(ambient)) {
+    //             tracing::error!("failed to set ambient capabilities: {}", e);
+    //         }
+    //     }
+    // }
+
+    let mut c = Caps::new();
     if let Some(effective) = cs.effective() {
         if !effective.is_empty() {
-            syscall.set_capability(CapSet::Effective, &to_set(effective))?;
+            c.set(CapSet::Effective, &to_set(effective))?;
         }
     }
 
     if let Some(permitted) = cs.permitted() {
         if !permitted.is_empty() {
-            syscall.set_capability(CapSet::Permitted, &to_set(permitted))?;
+            c.set(CapSet::Permitted, &to_set(permitted))?;
         }
     }
 
     if let Some(inheritable) = cs.inheritable() {
         if !inheritable.is_empty() {
-            syscall.set_capability(CapSet::Inheritable, &to_set(inheritable))?;
+            c.set(CapSet::Inheritable, &to_set(inheritable))?;
         }
     }
+    c.apply()?;
 
     if let Some(ambient) = cs.ambient() {
         if !ambient.is_empty() {
-            // check specifically for ambient, as those might not always be available
-            if let Err(e) = syscall.set_capability(CapSet::Ambient, &to_set(ambient)) {
-                tracing::error!("failed to set ambient capabilities: {}", e);
-            }
+            caps::set(None, caps::CapSet::Ambient, &to_set(ambient))?;
         }
     }
 
     Ok(())
+}
+
+// ========================================
+//
+const CAPS_V3: u32 = 0x20080522;
+
+#[derive(Debug, Default, Clone)]
+#[repr(C)]
+struct CapUserData {
+    effective_s0: u32,
+    permitted_s0: u32,
+    inheritable_s0: u32,
+    effective_s1: u32,
+    permitted_s1: u32,
+    inheritable_s1: u32,
+}
+
+#[derive(Debug)]
+#[repr(C)]
+struct CapUserHeader {
+    // Linux capabilities version (runtime kernel support)
+    version: u32,
+    // Process ID (thread)
+    pid: i32,
+}
+
+struct Caps {
+    data: CapUserData,
+}
+
+impl Caps {
+    fn new() -> Self {
+        Self {
+            data: CapUserData::default(),
+        }
+    }
+
+    fn set(&mut self, cset: CapSet, value: &CapsHashSet) -> Result<(), SyscallError> {
+        // let mut data: CapUserData = Default::default();
+        {
+            let (s1, s0) = match cset {
+                CapSet::Effective => (&mut self.data.effective_s1, &mut self.data.effective_s0),
+                CapSet::Inheritable => {
+                    (&mut self.data.inheritable_s1, &mut self.data.inheritable_s0)
+                }
+                CapSet::Permitted => (&mut self.data.permitted_s1, &mut self.data.permitted_s0),
+                CapSet::Bounding | CapSet::Ambient => {
+                    return Err(SyscallError::SetCaps("not a base set".into()))
+                }
+            };
+            *s1 = 0;
+            *s0 = 0;
+            for c in value {
+                match c.index() {
+                    0..=31 => {
+                        *s0 |= c.bitmask() as u32;
+                    }
+                    32..=63 => {
+                        *s1 |= (c.bitmask() >> 32) as u32;
+                    }
+                    _ => {
+                        return Err(SyscallError::SetCaps(
+                            format!("overlarge capability index {}", c.index()).into(),
+                        ))
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    fn apply(&mut self) -> Result<(), SyscallError> {
+        let mut hdr = CapUserHeader {
+            version: CAPS_V3,
+            pid: 0,
+        };
+        capset(&mut hdr, &self.data)
+    }
+}
+
+fn capset(hdr: &mut CapUserHeader, data: &CapUserData) -> Result<(), SyscallError> {
+    let r = unsafe { libc::syscall(126, hdr, data) };
+    match r {
+        0 => Ok(()),
+        _ => Err(SyscallError::SetCaps(
+            format!("capset failure: {}", std::io::Error::last_os_error()).into(),
+        )),
+    }
 }
 
 #[cfg(test)]

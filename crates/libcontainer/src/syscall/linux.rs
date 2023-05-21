@@ -345,6 +345,9 @@ impl Syscall for LinuxSyscall {
 
     /// Set capabilities for container process
     fn set_capability(&self, cset: CapSet, value: &CapsHashSet) -> Result<()> {
+        // TODO:
+        // Bounding -> Ok
+        // そのほかをいっぺんにセットする必要がある
         match cset {
             // caps::set cannot set capabilities in bounding set,
             // so we do it differently

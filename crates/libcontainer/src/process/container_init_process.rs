@@ -486,6 +486,7 @@ pub fn container_init_process(
             }
         }
     };
+
     // Take care of LISTEN_FDS used for systemd-active-socket. If the value is
     // not 0, then we have to preserve those fds as well, and set up the correct
     // environment variables.
@@ -597,7 +598,7 @@ pub fn container_init_process(
 
     if let Some(caps) = proc.capabilities() {
         capabilities::apply(caps, syscall).map_err(|err| {
-            tracing::error!(?err, "failed to drop capabilities");
+            tracing::error!(?err, "failed to apply capabilities");
             InitProcessError::SyscallOther(err)
         })?;
     }
