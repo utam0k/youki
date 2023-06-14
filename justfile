@@ -1,5 +1,6 @@
 alias build := youki-release
 alias youki := youki-dev
+root := `git rev-parse --show-toplevel`
 
 KIND_CLUSTER_NAME := 'youki'
 
