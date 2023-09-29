@@ -38,7 +38,7 @@ procfs = "0.15.1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tabwriter = "1"
-clap_complete = "4.3.2"
+clap_complete = "4.4.3"
 caps = "0.5.5"
 wasmer = { version = "4.0.0", optional = true }
 wasmer-wasix = { version = "0.9.0", optional = true }
