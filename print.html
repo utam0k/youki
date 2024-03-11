@@ -1,17 +1,17 @@
 <!DOCTYPE HTML>
-<html lang="en" class="sidebar-visible no-js light">
+<html lang="en" class="light" dir="ltr">
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
         <title>Youki User and Developer Documentation</title>
-        <meta name="robots" content="noindex" />
+        <meta name="robots" content="noindex">
 
 
         <!-- Custom HTML head -->
         
         <meta name="description" content="">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#ffffff">
 
         <link rel="icon" href="favicon.svg">
         <link rel="shortcut icon" href="favicon.png">
@@ -32,7 +32,7 @@
         <!-- Custom theme stylesheets -->
 
     </head>
-    <body>
+    <body class="sidebar-visible no-js">
     <div id="body-container">
         <!-- Provide site root to javascript -->
         <script>
@@ -62,31 +62,38 @@
             try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
             if (theme === null || theme === undefined) { theme = default_theme; }
             var html = document.querySelector('html');
-            html.classList.remove('no-js')
             html.classList.remove('light')
             html.classList.add(theme);
-            html.classList.add('js');
+            var body = document.querySelector('body');
+            body.classList.remove('no-js')
+            body.classList.add('js');
         </script>
+
+        <input type="checkbox" id="sidebar-toggle-anchor" class="hidden">
 
         <!-- Hide / unhide sidebar before it is displayed -->
         <script>
-            var html = document.querySelector('html');
+            var body = document.querySelector('body');
             var sidebar = null;
+            var sidebar_toggle = document.getElementById("sidebar-toggle-anchor");
             if (document.body.clientWidth >= 1080) {
                 try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
                 sidebar = sidebar || 'visible';
             } else {
                 sidebar = 'hidden';
             }
-            html.classList.remove('sidebar-visible');
-            html.classList.add("sidebar-" + sidebar);
+            sidebar_toggle.checked = sidebar === 'visible';
+            body.classList.remove('sidebar-visible');
+            body.classList.add("sidebar-" + sidebar);
         </script>
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="youki.html">Youki</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="user/introduction.html"><strong aria-hidden="true">1.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="user/basic_setup.html"><strong aria-hidden="true">1.1.</strong> Basic Setup</a></li><li class="chapter-item expanded "><a href="user/basic_usage.html"><strong aria-hidden="true">1.2.</strong> Basic Usage</a></li><li class="chapter-item expanded "><a href="user/crates.html"><strong aria-hidden="true">1.3.</strong> Crates provided</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="user/libcgroups.html"><strong aria-hidden="true">1.3.1.</strong> libcgroups</a></li><li class="chapter-item expanded "><a href="user/libcontainer.html"><strong aria-hidden="true">1.3.2.</strong> libcontainer</a></li><li class="chapter-item expanded "><a href="user/liboci_cli.html"><strong aria-hidden="true">1.3.3.</strong> liboci-cli</a></li><li class="chapter-item expanded "><a href="user/libseccomp.html"><strong aria-hidden="true">1.3.4.</strong> libseccomp</a></li></ol></li><li class="chapter-item expanded "><a href="user/webassembly.html"><strong aria-hidden="true">1.4.</strong> Webassembly</a></li><li class="spacer"></li></ol></li><li class="chapter-item expanded "><a href="developer/introduction.html"><strong aria-hidden="true">2.</strong> Developer Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="developer/basics.html"><strong aria-hidden="true">2.1.</strong> Basics</a></li><li class="chapter-item expanded "><a href="developer/unwritten_rules.html"><strong aria-hidden="true">2.2.</strong> Unwritten Rules</a></li><li class="chapter-item expanded "><a href="developer/good_places_to_start.html"><strong aria-hidden="true">2.3.</strong> Good places to start</a></li><li class="chapter-item expanded "><a href="developer/documentation_mdbook.html"><strong aria-hidden="true">2.4.</strong> This Documentation</a></li><li class="chapter-item expanded "><a href="developer/repo_structure.html"><strong aria-hidden="true">2.5.</strong> Repository Structure</a></li><li class="chapter-item expanded "><a href="developer/crate_specific_information.html"><strong aria-hidden="true">2.6.</strong> Crate Specific Information</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="developer/libcgroups.html"><strong aria-hidden="true">2.6.1.</strong> libcgroups</a></li><li class="chapter-item expanded "><a href="developer/libcontainer.html"><strong aria-hidden="true">2.6.2.</strong> libcontainer</a></li><li class="chapter-item expanded "><a href="developer/liboci_cli.html"><strong aria-hidden="true">2.6.3.</strong> liboci-cli</a></li><li class="chapter-item expanded "><a href="developer/libseccomp.html"><strong aria-hidden="true">2.6.4.</strong> libseccomp</a></li><li class="chapter-item expanded "><a href="developer/youki.html"><strong aria-hidden="true">2.6.5.</strong> youki</a></li><li class="chapter-item expanded "><a href="developer/test_framework.html"><strong aria-hidden="true">2.6.6.</strong> test_framework</a></li><li class="chapter-item expanded "><a href="developer/integration_test.html"><strong aria-hidden="true">2.6.7.</strong> integration_test</a></li><li class="chapter-item expanded "><a href="developer/runtimetest.html"><strong aria-hidden="true">2.6.8.</strong> runtimetest</a></li></ol></li><li class="chapter-item expanded "><a href="developer/containerd_integration_test_using_youki.html"><strong aria-hidden="true">2.7.</strong> containerd integration test</a></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="youki.html">Youki</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="user/introduction.html"><strong aria-hidden="true">1.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="user/basic_setup.html"><strong aria-hidden="true">1.1.</strong> Basic Setup</a></li><li class="chapter-item expanded "><a href="user/basic_usage.html"><strong aria-hidden="true">1.2.</strong> Basic Usage</a></li><li class="chapter-item expanded "><a href="user/crates.html"><strong aria-hidden="true">1.3.</strong> Crates provided</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="user/libcgroups.html"><strong aria-hidden="true">1.3.1.</strong> libcgroups</a></li><li class="chapter-item expanded "><a href="user/libcontainer.html"><strong aria-hidden="true">1.3.2.</strong> libcontainer</a></li><li class="chapter-item expanded "><a href="user/liboci_cli.html"><strong aria-hidden="true">1.3.3.</strong> liboci-cli</a></li><li class="chapter-item expanded "><a href="user/libseccomp.html"><strong aria-hidden="true">1.3.4.</strong> libseccomp</a></li></ol></li><li class="chapter-item expanded "><a href="user/webassembly.html"><strong aria-hidden="true">1.4.</strong> Webassembly</a></li><li class="spacer"></li></ol></li><li class="chapter-item expanded "><a href="developer/introduction.html"><strong aria-hidden="true">2.</strong> Developer Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="developer/basics.html"><strong aria-hidden="true">2.1.</strong> Basics</a></li><li class="chapter-item expanded "><a href="developer/unwritten_rules.html"><strong aria-hidden="true">2.2.</strong> Unwritten Rules</a></li><li class="chapter-item expanded "><a href="developer/good_places_to_start.html"><strong aria-hidden="true">2.3.</strong> Good places to start</a></li><li class="chapter-item expanded "><a href="developer/documentation_mdbook.html"><strong aria-hidden="true">2.4.</strong> This Documentation</a></li><li class="chapter-item expanded "><a href="developer/repo_structure.html"><strong aria-hidden="true">2.5.</strong> Repository Structure</a></li><li class="chapter-item expanded "><a href="developer/debugging.html"><strong aria-hidden="true">2.6.</strong> Debugging</a></li><li class="chapter-item expanded "><a href="developer/crate_specific_information.html"><strong aria-hidden="true">2.7.</strong> Crate Specific Information</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="developer/libcgroups.html"><strong aria-hidden="true">2.7.1.</strong> libcgroups</a></li><li class="chapter-item expanded "><a href="developer/libcontainer.html"><strong aria-hidden="true">2.7.2.</strong> libcontainer</a></li><li class="chapter-item expanded "><a href="developer/liboci_cli.html"><strong aria-hidden="true">2.7.3.</strong> liboci-cli</a></li><li class="chapter-item expanded "><a href="developer/libseccomp.html"><strong aria-hidden="true">2.7.4.</strong> libseccomp</a></li><li class="chapter-item expanded "><a href="developer/youki.html"><strong aria-hidden="true">2.7.5.</strong> youki</a></li></ol></li><li class="chapter-item expanded "><a href="developer/e2e/e2e_tests.html"><strong aria-hidden="true">2.8.</strong> e2e tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="developer/e2e/rust_oci_test.html"><strong aria-hidden="true">2.8.1.</strong> rust oci tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="developer/e2e/integration_test.html"><strong aria-hidden="true">2.8.1.1.</strong> integration_test</a></li><li class="chapter-item expanded "><a href="developer/e2e/test_framework.html"><strong aria-hidden="true">2.8.1.2.</strong> test_framework</a></li><li class="chapter-item expanded "><a href="developer/e2e/runtimetest.html"><strong aria-hidden="true">2.8.1.3.</strong> runtimetest</a></li></ol></li><li class="chapter-item expanded "><a href="developer/e2e/containerd_integration_test_using_youki.html"><strong aria-hidden="true">2.8.2.</strong> containerd integration test</a></li><li class="chapter-item expanded "><a href="developer/e2e/runtime_tools.html"><strong aria-hidden="true">2.8.3.</strong> runtime tools</a></li></ol></li></ol></li></ol>
             </div>
-            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle">
+                <div class="sidebar-resize-indicator"></div>
+            </div>
         </nav>
 
         <!-- Track and set sidebar scroll position -->
@@ -117,9 +124,9 @@
                                 <div id="menu-bar-hover-placeholder"></div>
                 <div id="menu-bar" class="menu-bar sticky">
                     <div class="left-buttons">
-                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                        <label id="sidebar-toggle" class="icon-button" for="sidebar-toggle-anchor" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
                             <i class="fa fa-bars"></i>
-                        </button>
+                        </label>
                         <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
                             <i class="fa fa-paint-brush"></i>
                         </button>
@@ -227,41 +234,60 @@ youki is named after the Japanese word 'youki', which means 'a container'. In Ja
 <p>This explains the requirements for compiling Youki as a binary, to use it as a low-level container runtime, or to depend once of its crates as dependency for your own project.</p>
 <p>Youki currently only supports Linux Platform, and to use it on other platform you will need to use some kind of virtualization. The repo itself provides Vagrantfile that provides basic setup to use Youki on non-Linux system using Vagrant. The last sub-section explains using this vagrantfile.</p>
 <p>Also note that Youki currently only supports and expects systemd as init system, and would not work on other systems. There is currently work on-going to put systemd dependent features behind a feature flag, but till then you will need a systemd enabled system to work with Youki.</p>
-<h2 id="requirements"><a class="header" href="#requirements">Requirements</a></h2>
-<p>As Youki is written in Rust, you will need to install and setup Rust toolchain to compile it. The instructions for that can be found on Rust's official site <a href="https://www.rust-lang.org/tools/install">here</a>.</p>
-<p>You can use Youki by itself to start and run containers, but it can be a little tedious, as it is a low-level container runtime. You can use a High-level container runtime, with its runtime set to Youki, so that it will be easier to use. Both of these are explained in the <a href="user/./basic_usage.html">Basic Usage</a>. For using it along with an high-level runtime, you will to install one such as Docker or Podman. This documentation uses Docker in its examples, which can be installed from <a href="https://docs.docker.com/engine/install">here</a>.</p>
-<p>To compile and run, Youki itself depends on some underlying libraries being installed. You can install them using your respective package manager as shown below.</p>
-<h3 id="debian-ubuntu-and-related-distributions"><a class="header" href="#debian-ubuntu-and-related-distributions">Debian, Ubuntu and related distributions</a></h3>
+<h2 id="build-requirements"><a class="header" href="#build-requirements">Build Requirements</a></h2>
+<p>As Youki is written in Rust, you will need to install and setup Rust toolchain to compile it. The instructions for that can be found on Rust's official site <a href="https://www.rust-lang.org/tools/install">here</a>.
+If you installed it using rustup, the correct compiler version will be setup automatically from <code>rust-toolchain.toml</code> in the repo root.</p>
+<h3 id="build-with-cross-rs"><a class="header" href="#build-with-cross-rs">Build with cross-rs</a></h3>
+<p>You can compile youki using <a href="https://github.com/cross-rs/cross">cross-rs</a>, which provides:</p>
+<ul>
+<li>Seamless compilation for different architectures (see <code>Cross.toml</code> in the repo root for the list of supported targets)</li>
+<li>No build time dependencies (compilation runs in a container)</li>
+<li>No runtime dependencies when building static binaries (musl targets)</li>
+</ul>
+<p>The only build dependency is <a href="https://github.com/cross-rs/cross?tab=readme-ov-file#installation">cross-rs</a> and its <a href="https://github.com/cross-rs/cross?tab=readme-ov-file#dependencies">dependencies</a> (rustup and docker or podman).</p>
+<pre><code class="language-console">$ CARGO=cross TARGET=musl just youki-dev # or youki-release
+</code></pre>
+<h3 id="build-without-cross-rs"><a class="header" href="#build-without-cross-rs">Build without cross-rs</a></h3>
+<p>Install the build dependencies and then run:</p>
+<pre><code class="language-console">$ just youki-dev # or youki-release
+</code></pre>
+<p>Install the build dependencies using your distribution's package manger</p>
+<h4 id="debian-ubuntu-and-related-distributions"><a class="header" href="#debian-ubuntu-and-related-distributions">Debian, Ubuntu and related distributions</a></h4>
 <pre><code class="language-console">$ sudo apt-get install    \
       pkg-config          \
       libsystemd-dev      \
-      libdbus-glib-1-dev  \
       build-essential     \
       libelf-dev          \
       libseccomp-dev      \
       libclang-dev        \
       libssl-dev
 </code></pre>
-<h3 id="fedora-centos-rhel-and-related-distributions"><a class="header" href="#fedora-centos-rhel-and-related-distributions">Fedora, CentOS, RHEL and related distributions</a></h3>
+<h4 id="fedora-centos-rhel-and-related-distributions"><a class="header" href="#fedora-centos-rhel-and-related-distributions">Fedora, CentOS, RHEL and related distributions</a></h4>
 <pre><code class="language-console">$ sudo dnf install          \
       pkg-config            \
       systemd-devel         \
-      dbus-devel            \
       elfutils-libelf-devel \
       libseccomp-devel      \
       clang-devel           \
       openssl-devel
 </code></pre>
+<h2 id="runtime-requirements"><a class="header" href="#runtime-requirements">Runtime requirements</a></h2>
+<p>The static binary (musl) builds of youki have no additional runtime requirements. Otherwise you need to install the runtime requirements using your distribution's package manager:</p>
+<h4 id="debian-ubuntu-and-related-distributions-1"><a class="header" href="#debian-ubuntu-and-related-distributions-1">Debian, Ubuntu and related distributions</a></h4>
+<pre><code class="language-console">$ sudo apt-get install libseccomp2
+</code></pre>
+<h4 id="fedora-centos-rhel-and-related-distributions-1"><a class="header" href="#fedora-centos-rhel-and-related-distributions-1">Fedora, CentOS, RHEL and related distributions</a></h4>
+<pre><code class="language-console">$ sudo dnf install libseccomp
+</code></pre>
+<h2 id="running-youki"><a class="header" href="#running-youki">Running youki</a></h2>
+<p>You can use Youki by itself to start and run containers, but it can be a little tedious, as it is a low-level container runtime. You can use a High-level container runtime, with its runtime set to Youki, so that it will be easier to use. Both of these are explained in the <a href="user/./basic_usage.html">Basic Usage</a>. For using it along with an high-level runtime, you will to install one such as Docker or Podman. This documentation uses Docker in its examples, which can be installed from <a href="https://docs.docker.com/engine/install">here</a>.</p>
 <hr />
 <h2 id="quick-install"><a class="header" href="#quick-install">Quick install</a></h2>
-<p>Install from the GitHub release.
-Note that this way also requires the aforementioned installation.</p>
-<pre><code class="language-console">$ wget https://github.com/containers/youki/releases/download/v0.1.0/youki_0_1_0_linux.tar.gz
-$ tar -zxvf youki_0_1_0_linux.tar.gz youki_0_1_0_linux/youki-0.1.0/youki
-# Maybe you need root privileges.
-$ mv youki_0_1_0_linux/youki-0.1.0/youki /usr/local/bin/youki
-$ rm -rf youki_0_1_0_linux.tar.gz youki_0_1_0_linux
+<p>Install from the GitHub release as root:</p>
+<!--youki release begin-->
+<pre><code class="language-console"># curl -sSfL https://github.com/containers/youki/releases/download/v0.3.2/youki-0.3.2-$(uname -m)-musl.tar.gz | tar -xzvC /usr/bin/ youki
 </code></pre>
+<!--youki release end-->
 <h2 id="getting-the-source"><a class="header" href="#getting-the-source">Getting the source</a></h2>
 <p>Currently Youki can only be installed from the source code itself, so you will need to clone the Youki GitHub repository to get the source code for using it as a runtime. If you are using any crates of Youki as dependency you need to do this step, as Cargo will automatically clone the repository for you.</p>
 <p>To clone the repository, run</p>
@@ -269,10 +295,10 @@ $ rm -rf youki_0_1_0_linux.tar.gz youki_0_1_0_linux
 </code></pre>
 <p>This will create a directory named youki in the directory you ran the command in. This youki directory will be referred to as root directory throughout the documentation.</p>
 <h2 id="installing-the-source"><a class="header" href="#installing-the-source">Installing the source</a></h2>
-<p>Once you have cloned the source, you can build it using</p>
+<p>Once you have cloned the source, you can build it with <a href="https://github.com/casey/just#installation">just</a> :</p>
 <pre><code class="language-console"># go into the cloned directory
 $ cd youki
-$ make youki-dev # or youki-release
+$ just youki-dev # or youki-release
 $ ./youki -h # get information about youki command
 </code></pre>
 <p>This will build the Youki binary, and put it at the root level of the cloned directory, that is in the youki/ .</p>
@@ -281,7 +307,7 @@ $ ./youki -h # get information about youki command
 <p>To use any of the sub-crate as a dependency in your own project, you can specify the dependency as follows,</p>
 <pre><code class="language-toml">[dependencies]
 ...
-liboci-cli = { git = &quot;https://github.com/containers/Youki.git&quot; }
+liboci-cli = { git = "https://github.com/containers/Youki.git" }
 ...
 </code></pre>
 <p>Here we use <code>liboci-cli</code> as an example, which can be replaced by the sub-crate that you need.</p>
@@ -304,7 +330,7 @@ $ VAGRANT_VAGRANTFILE=Vagrantfile.root vagrant ssh
 
 # in virtual machine
 $ cd youki
-$ make youki-dev # or youki-release
+$ just youki-dev # or youki-release
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="basic-usage"><a class="header" href="#basic-usage">Basic Usage</a></h1>
 <p>This explains using Youki as a low-level container runtime. Youki can be used by itself to create, start and run containers, but doing so can be tedious, and thus you might want to use a higher-level runtime with Youki set as its runtime, so that you can get a convenient and easy interface.</p>
@@ -320,7 +346,7 @@ $ make youki-dev # or youki-release
 <pre><code class="language-console">sudo systemctl stop docker
 </code></pre>
 <p>After this you need to manually restart the docker daemon, but with Youki as its runtime. To do this, run following command in the youki/ directory after building youki</p>
-<pre><code class="language-console">dockerd --experimental --add-runtime=&quot;youki=$(pwd)/youki&quot; # run in the youki/scripts directory
+<pre><code class="language-console">dockerd --experimental --add-runtime="youki=$(pwd)/youki" # run in the youki/scripts directory
 </code></pre>
 <p>This will start the daemon and hang up the console. You can either start this as a background process to continue using the same terminal, or use another terminal, which will make it easier to stop the docker daemon later.</p>
 <p>In case you don't stop the original daemon, you can get an error message after previous command</p>
@@ -341,13 +367,13 @@ let docker know youki
 (<a href="https://docs.docker.com/engine/reference/commandline/dockerd/#on-linux">source</a>).
 You may need to create this file, if it does not yet exist. A sample content of it:</p>
 <pre><code class="language-json">{
-  &quot;default-runtime&quot;: &quot;runc&quot;,
-  &quot;runtimes&quot;: {
-    &quot;youki&quot;: {
-      &quot;path&quot;: &quot;/path/to/youki/youki&quot;,
-      &quot;runtimeArgs&quot;: [
-          &quot;--debug&quot;,
-          &quot;--systemd-log&quot;
+  "default-runtime": "runc",
+  "runtimes": {
+    "youki": {
+      "path": "/path/to/youki/youki",
+      "runtimeArgs": [
+          "--debug",
+          "--systemd-log"
       ]
     }
   }
@@ -374,10 +400,10 @@ docker export $(docker create busybox) | tar -C rootfs -xvf -
 <pre><code class="language-console">../youki spec
 </code></pre>
 <p>After this, you can manually edit the file to customize the behavior of the container process. For example, to run the desired program inside the container, you can edit the process.args</p>
-<pre><code class="language-json">&quot;process&quot;: {
+<pre><code class="language-json">"process": {
 ...
-&quot;args&quot;: [
-  &quot;sleep&quot;, &quot;30&quot;
+"args": [
+  "sleep", "30"
 ],
 ...
  }
@@ -458,7 +484,16 @@ log level to <code>debug</code>. This flag is ignored if <code>--log-level</code
 <p>function <code>read_cgroup_file</code> which reads data from given cgroup file</p>
 </li>
 <li>
-<p>function <code>get_cgroup_setup</code> which returns setup of cgroups (v1,v2, hybrid) on the system</p>
+<p>function <code>get_cgroup_setup_with_root</code> which returns setup of cgroups (v1,v2, hybrid) on the system with specified cgroup root path</p>
+</li>
+<li>
+<p>function <code>get_cgroup_setup</code> which returns setup of cgroups (v1,v2, hybrid) on the system with default cgroup root path <code>/sys/fs/cgroup</code></p>
+</li>
+<li>
+<p>function <code>create_cgroup_manager_with_root</code> which returns corresponding cgroup manager on the system with specified cgroup root path, if the passed <code>root_path</code> argument is <code>None</code>, then it's same as function <code>create_cgroup_manager</code></p>
+</li>
+<li>
+<p>function <code>create_cgroup_manager</code> which returns corresponding cgroup manager on the system with default cgroup root path <code>/sys/fs/cgroup</code></p>
 </li>
 </ul>
 <h3 id="stats"><a class="header" href="#stats">stats</a></h3>
@@ -518,6 +553,9 @@ log level to <code>debug</code>. This flag is ignored if <code>--log-level</code
 <li>
 <p>module <code>manager</code>, which contains <code>Manager</code> struct, which is the cgroup manager, and contain information such as the root cgroups path, path for the specific cgroups, client to communicate with systemd etc. This also implements <code>CgroupManager</code> trait, and thus can be used for cgroups related operations.</p>
 </li>
+<li>
+<p>module <code>dbus-native</code> is the native implementation for dbus connection, which is used to interact with systemd in rootless mode.</p>
+</li>
 </ul>
 <h3 id="test_manager"><a class="header" href="#test_manager">test_manager</a></h3>
 <p>This exposes a <code>TestManager</code> struct which can be used as dummy for cgroup testing purposes, which also implements <code>CgroupManager</code>.</p>
@@ -556,7 +594,7 @@ log level to <code>debug</code>. This flag is ignored if <code>--log-level</code
 <p><code>rootfs</code> : this contains modules which deal with rootfs, which is minimal filesystem that is provided to the container.</p>
 </li>
 <li>
-<p><code>rootless</code> : this deals with running containers in a rootless configuration, that is running containers without needing root permissions.</p>
+<p><code>user_ns</code> : this deals with running containers in with new user namespace, usually rootless containers will use this, that is running containers without needing root permissions.</p>
 </li>
 <li>
 <p><code>seccomp</code> : this deals with setting up seccomp for container process. It uses libseccomp crate in order to do that.</p>
@@ -604,40 +642,36 @@ log level to <code>debug</code>. This flag is ignored if <code>--log-level</code
 <li>Build a container image with the WebAssembly module</li>
 <li>Run the container with youki</li>
 </ol>
-<h2 id="build-youki-with-wasm-wasmedge-or-wasm-wasmer-feature-flag-enabled"><a class="header" href="#build-youki-with-wasm-wasmedge-or-wasm-wasmer-feature-flag-enabled">Build youki with <code>wasm-wasmedge</code> or <code>wasm-wasmer</code> feature flag enabled</a></h2>
+<h2 id="build-youki-with-wasm-wasmedge-wasm-wasmer-or-wasm-wasmtime-feature-flag-enabled"><a class="header" href="#build-youki-with-wasm-wasmedge-wasm-wasmer-or-wasm-wasmtime-feature-flag-enabled">Build youki with <code>wasm-wasmedge</code>, <code>wasm-wasmer</code>, or <code>wasm-wasmtime</code> feature flag enabled</a></h2>
 <ul>
 <li>
 <p>Run <code>build.sh</code> with <code>-f wasm-wasmedge</code> option.</p>
 <pre><code class="language-bash">./scripts/build.sh -o . -r -f wasm-wasmedge
 </code></pre>
-<blockquote>
-<p>The <code>wasm-wasmedge</code> feature will install WasmEdge Runtime library in the <code>$HOME/.wasmedge</code> directory.
-To make the library available in your system, run the following command:</p>
-<pre><code class="language-bash">export LD_LIBRARY_PATH=$HOME/.wasmedge/lib
-</code></pre>
-<p>or</p>
-<pre><code class="language-bash">source $HOME/.wasmedge/env
-</code></pre>
-</blockquote>
 </li>
 <li>
 <p>Run <code>build.sh</code> with <code>-f wasm-wasmer</code> option.</p>
 <pre><code class="language-bash">./scripts/build.sh -o . -r -f wasm-wasmer
 </code></pre>
 </li>
+<li>
+<p>Run <code>build.sh</code> with <code>-f wasm-wasmtime</code> option.</p>
+<pre><code class="language-bash">./scripts/build.sh -o . -r -f wasm-wasmtime
+</code></pre>
+</li>
 </ul>
 <h2 id="build-a-container-image-with-the-webassembly-module"><a class="header" href="#build-a-container-image-with-the-webassembly-module">Build a container image with the WebAssembly module</a></h2>
-<p>If you want to run a webassembly module with youki, your config.json has to include either <strong>runc.oci.handler</strong> or <strong>module.wasm.image/variant=compat&quot;</strong>.</p>
+<p>If you want to run a webassembly module with youki, your config.json has to include either <strong>runc.oci.handler</strong> or <strong>module.wasm.image/variant=compat"</strong>.</p>
 <p>It also needs to specify a valid .wasm (webassembly binary) or .wat (webassembly test) module as entrypoint for the container. If a wat module is specified it will be compiled to a wasm module by youki before it is executed. The module also needs to be available in the root filesystem of the container obviously.</p>
-<pre><code class="language-json">&quot;ociVersion&quot;: &quot;1.0.2-dev&quot;,
-&quot;annotations&quot;: {
-    &quot;run.oci.handler&quot;: &quot;wasm&quot;
+<pre><code class="language-json">"ociVersion": "1.0.2-dev",
+"annotations": {
+    "run.oci.handler": "wasm"
 },
-&quot;process&quot;: {
-    &quot;args&quot;: [
-        &quot;hello.wasm&quot;,
-        &quot;hello&quot;,
-        &quot;world&quot;
+"process": {
+    "args": [
+        "hello.wasm",
+        "hello",
+        "world"
     ],
 ...
 }
@@ -651,14 +685,14 @@ cd ./wasm-module
 vi src/main.rs
 </code></pre>
 <pre><pre class="playground"><code class="language-rust">fn main() {
-    println!(&quot;Printing args&quot;);
+    println!("Printing args");
     for arg in std::env::args().skip(1) {
-        println!(&quot;{}&quot;, arg);
+        println!("{}", arg);
     }
 
-    println!(&quot;Printing envs&quot;);
+    println!("Printing envs");
     for envs in std::env::vars() {
-        println!(&quot;{:?}&quot;, envs);
+        println!("{:?}", envs);
     }  
 }</code></pre></pre>
 <p>Then compile the program to WASI.</p>
@@ -670,10 +704,10 @@ vi src/main.rs
 </code></pre>
 <pre><code class="language-Dockerfile">FROM scratch
 COPY target/wasm32-wasi/debug/wasm-module.wasm /
-ENTRYPOINT [&quot;wasm-module.wasm&quot;]
+ENTRYPOINT ["wasm-module.wasm"]
 </code></pre>
 <p>Then build a container image with <code>module.wasm.image/variant=compat</code> annotation. <sup class="footnote-reference"><a href="#1">1</a></sup></p>
-<pre><code class="language-console">sudo buildah build --annotation &quot;module.wasm.image/variant=compat&quot; -t wasm-module .
+<pre><code class="language-console">sudo buildah build --annotation "module.wasm.image/variant=compat" -t wasm-module .
 </code></pre>
 <h2 id="run-the-wasm-module-with-youki-and-podman"><a class="header" href="#run-the-wasm-module-with-youki-and-podman">Run the wasm module with youki and podman</a></h2>
 <p>Run podman with youki as runtime. <sup class="footnote-reference"><a href="#1">1</a></sup></p>
@@ -784,6 +818,90 @@ cd -
 <p>Contains scripts for various purposes, such as building youki, running integration tests etc. These might be small scripts called from many other scripts, big scripts that perform a complex task or helper scripts for the main makefile.</p>
 <h3 id="tests"><a class="header" href="#tests">tests</a></h3>
 <p>This contains all the integration tests for validating youki. Note that these are integration tests for start-to-end testing of youki commands. Unit tests for individual parts are in their respective source files in crates.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="debugging"><a class="header" href="#debugging">Debugging</a></h1>
+<p>Since Youki uses pipe and double-fork in the creating phase, it is hard to debug what happened.
+You might encounter the error message, "Broken pipe ..." Unfortunately,
+this error message has only information that a child process exists with an error for some reason.</p>
+<p>This section will give some tips to debug youki to know what happens in the child processes.</p>
+<h1 id="bpftrace"><a class="header" href="#bpftrace">bpftrace</a></h1>
+<p><a href="https://github.com/iovisor/bpftrace">bpftrace</a> is an eBPF based tool.
+In the case of youki, you can catch the system calls youki issued.</p>
+<p>For example, if you catch write system calls, you can see the log output until the middle of process.
+It allows you to do something similar to print debugging.</p>
+<p><em>How to debug</em></p>
+<ol>
+<li>
+<p>You need to install bpftrace, please refer to <a href="https://github.com/iovisor/bpftrace/blob/master/INSTALL.md">the official documentation</a> to know how to install it.</p>
+</li>
+<li>
+<p>Before running the process or comannd you want to debug, run the following command in another terminal.</p>
+<p>You need the root privilege to run it.</p>
+<pre><code class="language-console">$ cd ${youki_repo}
+$ just hack-bpftrace
+</code></pre>
+</li>
+<li>
+<p>Run the command you want to debug.</p>
+</li>
+</ol>
+<p><em>For example</em></p>
+<ol>
+<li>
+<p>Run the bpftrace script.</p>
+<pre><code class="language-console">$ just hack-bpftrace
+BPFTRACE_STRLEN=120 ./hack/debug.bt
+Attaching 13 probes...
+Tracing Youki syscalls... Hit Ctrl-C to end.
+TIME                 COMMAND PID      EVENT     CONTENT
+</code></pre>
+</li>
+<li>
+<p>Run the Kubernetes cluster using kind with youki</p>
+<pre><code class="language-console">$ cd ${youki_repo}
+$ just test-kind
+docker buildx build --output=bin/ -f tests/k8s/Dockerfile --target kind-bin .
+...
+Creating cluster "youki" ...
+...
+kubectl --context=kind-youki apply -f tests/k8s/deploy.yaml
+runtimeclass.node.k8s.io/youki created
+deployment.apps/nginx-deployment created
+...
+kubectl --context=kind-youki delete -f tests/k8s/deploy.yaml
+runtimeclass.node.k8s.io "youki" deleted
+deployment.apps "nginx-deployment" deleted
+</code></pre>
+</li>
+<li>
+<p>Returning to the first command executed, the system calls youki issued are caught and logged.</p>
+<pre><code class="language-console">$ just hack-bpftrace
+BPFTRACE_STRLEN=120 ./hack/debug.bt
+Attaching 13 probes...
+Tracing Youki syscalls... Hit Ctrl-C to end.
+TIME                 COMMAND PID      EVENT     CONTENT
+207033348942           youki 13743    open      errno=2, fd=-1, file=/opt/containerd/lib/glibc-hwcaps/x86-64-v3/libc.so.6
+...
+207035462044           youki 13743    open      errno=0, fd=3, file=/proc/self/exe
+207035478523           youki 13743    write     fd=4, ELF
+207066996623               4 13743    open      errno=2, fd=-1, file=/opt/containerd/lib/glibc-hwcaps/x86-64-v3/libc.so.6
+...
+207070130175               4 13743    clone3
+207070418829 youki:[1:INTER] 13747    write     fd=4, {"timestamp":"2023-09-24T10:47:07.427846Z","level":"INFO","message":"cgroup manager V2 will be used","target":"libcgrou
+...
+207084948440 youki:[1:INTER] 13747    clone3
+207085058811 youki:[1:INTER] 13747    write     fd=4, {"timestamp":"2023-09-24T10:47:07.442502Z","level":"DEBUG","message":"sending init pid (Pid(1305))","target":"libcontai
+207085343170  youki:[2:INIT] 13750    write     fd=4, {"timestamp":"2023-09-24T10:47:07.442746Z","level":"DEBUG","message":"unshare or setns: LinuxNamespace { typ: Uts, path
+...
+207088256843  youki:[2:INIT] 13750    pivt_root new_root=/run/containerd/io.containerd.runtime.v2.task/k8s.io/0fea8cf5f8d1619a35ca67fd6fa73d8d7c8fc70ac2ed43ee2ac2f8610bb938f6/r, put_old=/run/containerd/io.containerd.runtime.v2.task/k8s.io/0fea8cf5f8d1619a35ca67fd6fa73d8d7c8fc70ac2ed43ee2ac2f8610bb938f6/r
+...
+207097207551  youki:[2:INIT] 13750    write     fd=4, {"timestamp":"2023-09-24T10:47:07.454645Z","level":"DEBUG","message":"found executable in executor","executable":"\"/pa
+...
+207139391811  youki:[2:INIT] 13750    write     fd=4, {"timestamp":"2023-09-24T10:47:07.496815Z","level":"DEBUG","message":"received: start container","target":"libcontainer
+207139423243  youki:[2:INIT] 13750    write     fd=4, {"timestamp":"2023-09-24T10:47:07.496868Z","level":"DEBUG","message":"executing workload with default handler","target"
+
+</code></pre>
+</li>
+</ol>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="crate-specific-information"><a class="header" href="#crate-specific-information">Crate Specific Information</a></h1>
 <p>This section contains subsections for each individual crate in the youki workspace. Each of the subsection will have information and resources on that particular crate.</p>
 <p>In case you are working with some specific crate, you can find resources about it in its section. Also make sure you add any resources that you find when working on them as well.</p>
@@ -797,7 +915,7 @@ cd -
 <ul>
 <li>Trait <code>CgroupManager</code>, this abstracts over the underlying implementation of interacting with specific version of cgroups, and gives functions to add certain process to a certain cgroup, apply resource restrictions, get statistics of a cgroups, freeze a cgroup, remove a cgroup or get list of all processes belonging to a cgroup. v1 and v2 modules both contain a version specific cgroup manager which implements this trait, and thus either can be given to functions or structs which expects a cgroup manager, depending on which cgroups the host system uses.</li>
 <li>Apart from the trait, this also contains functions which help with reading cgroups files, and write data to a cgroup file, which are used throughout this crate.</li>
-<li>A function to detect which cgroup setup (v1, v2 or hybrid) is on the host system, as well as a function to get the corresponding cgroups manager.</li>
+<li>Functions to detect which cgroup setup (v1, v2 or hybrid) is on the host system with/without specified mounted cgroup root path, as well as functions to get the corresponding cgroups manager w/o cgroup root path.</li>
 </ul>
 </li>
 <li>
@@ -822,6 +940,18 @@ cd -
 </li>
 </ul>
 <p>As youki currently depends on systemd as an init system, this crate also exposes module systemd, which provides interface for working with systemd related operations. <a href="https://www.freedesktop.org/software/systemd/man/systemd.resource-control.html">systemd resource control</a> is a good place to read more about systemd and its involvement in resource control.</p>
+<h2 id="dbus-native"><a class="header" href="#dbus-native">Dbus Native</a></h2>
+<p>This module is the native implementation of dbus connection functionality used for connecting with systemd via dbus. Refer to <a href="https://github.com/containers/youki/issues/2208">this issue discussion</a> following for the discussion regarding moving away from existing dbus-interfacing library.</p>
+<p>Note that this implements the minimal required functionality for youki to use dbus, and thus does not have all the dbus features.</p>
+<ul>
+<li>
+<p>Refer to see <a href="https://dbus.freedesktop.org/doc/dbus-specification.html">dbus specification</a> and <a href="https://dbus.freedesktop.org/doc/api/html/structDBusHeader.html">header format</a> for the individual specifications.</p>
+</li>
+<li>
+<p>For systemd interface and types, you can generate the following file and take help from the auto-generated functions
+<code>dbus-codegen-rust -s -g -m None -d org.freedesktop.systemd1 -p /org/freedesktop/systemd1</code>, see https://github.com/diwic/dbus-rs</p>
+</li>
+</ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="libcontainer-1"><a class="header" href="#libcontainer-1">libcontainer</a></h1>
 <p>This crate is one of the core crates of the youki workspace, and has functions and structs that deal with the actual craetion and management of the container processes.</p>
 <p>Remember, in the end, a container is just another process in Linux, which has control groups, namespaces, pivot_root and other mechanisms applied to it. The program executing has the impression that is is running on a complete system, but from the host system's perspective, it is just another process, and has attributes such as pid, file descriptors, etc. associated with it like any other process.</p>
@@ -905,26 +1035,157 @@ when the executor can't handle the workload.</p>
 <p>When the init process receives the start signal, it execs the program to be run in the container, and then exits.</p>
 <h3 id="notes-1"><a class="header" href="#notes-1">Notes</a></h3>
 <p>The main youki process will set up pipes used as message passing and synchronization mechanism with the init process. The reason youki needs to create/fork two process instead of one is due to the user and pid namespaces. In rootless container, we need to first enter user namespace, since all other namespaces requires CAP_SYSADMIN. When unshare or set_ns into pid namespace, only the children of the current process will enter into a different pid namespace. As a result, we must first fork a process to enter into user namespace, call unshare or set_ns for pid namespace, then fork again to enter into the correct pid namespace.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="test_framework"><a class="header" href="#test_framework">test_framework</a></h1>
-<p><strong>Note</strong> that these tests resides in /tests/rust-integration-tests/test_framework at the time of writing.</p>
-<p>This crate contains the testing framework specifically developed for porting the OCI integration test to rust. This contains structs to represent the individual tests, group of tests and a test manager that has responsibility to run tests. This Also exposes traits which can be used to implement custom test structs or test group structs if needed.</p>
-<p>By default the test groups are run in parallel using the <a href="https://www.crates.io/crates/crossbeam">crossbeam crate</a>, and the default test_group implementation also runs individual tests parallelly.</p>
-<p>Sometimes you might need to run the tests in a test group serially or in certain order, for example in case of testing container lifecycle, a container must be created and started before stopping it. In such cases, you will need to implement the respective traits on your own structs, so that you can have fine control over thr running of tests. Check the readme of the test_framework crate to see the struct and trait documentation <a href="https://github.com/containers/youki/tree/main/crates/test_framework">here</a>.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="e2e-tests"><a class="header" href="#e2e-tests">e2e tests</a></h1>
+<p>There are various e2e tests:</p>
+<ul>
+<li>
+<p><a href="developer/e2e/./rust_oci_test.html">rust oci tests</a></p>
+<p>This is youki's original integration to verify the behavior of the low-level container runtime.</p>
+</li>
+<li>
+<p><a href="developer/e2e/./containerd_integration_test_using_youki.html">containerd integration test</a></p>
+<p>This is the method that containerd's integration test runs with youki.</p>
+</li>
+<li>
+<p><a href="developer/e2e/./runtime_tools.html">runtime tools</a></p>
+<p>This is the method to run the runtime tools that OCI manages as a test tool to verify meeting the OCI Runtime Spec</p>
+</li>
+</ul>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="contest"><a class="header" href="#contest">Contest</a></h1>
+<p>This is youki's original integration to verify the behavior of the low-level container runtime.</p>
+<p><img src="developer/e2e/../../assets/rust_oci_tests.png" alt="Overview" /></p>
+<h1 id="how-to-run"><a class="header" href="#how-to-run">How to run</a></h1>
+<pre><code class="language-console">just test-contest
+</code></pre>
+<h1 id="how-to-write"><a class="header" href="#how-to-write">How to write</a></h1>
+<p>We will not go into detail here, but will explain how to write and add a new test case based on an example test.</p>
+<details>
+<summary>Fully the code of the example test</summary>
+<p>
+<pre><code class="language-rust no_run noplayground">use anyhow::{Context, Result};
+use oci_spec::runtime::{ProcessBuilder, Spec, SpecBuilder};
+use test_framework::{test_result, Test, TestGroup, TestResult};
+
+use crate::utils::test_inside_container;
+
+////////// ANCHOR: get_example_spec
+fn create_spec() -&gt; Result&lt;Spec&gt; {
+    SpecBuilder::default()
+        .process(
+            ProcessBuilder::default()
+                .args(
+                    ["runtimetest", "hello_world"]
+                        .iter()
+                        .map(|s| s.to_string())
+                        .collect::&lt;Vec&lt;String&gt;&gt;(),
+                )
+                .build()?,
+        )
+        .build()
+        .context("failed to create spec")
+}
+////////// ANCHOR_END: get_example_spec
+
+////////// ANCHOR: example_test
+fn example_test() -&gt; TestResult {
+    let spec = test_result!(create_spec());
+    test_inside_container(spec, &amp;|_| Ok(()))
+}
+////////// ANCHOR_END: example_test
+
+////////// ANCHOR: get_example_test
+pub fn get_example_test() -&gt; TestGroup {
+    let mut test_group = TestGroup::new("example");
+    let test1 = Test::new("hello world", Box::new(example_test));
+    test_group.add(vec![Box::new(test1)]);
+
+    test_group
+}
+////////// ANCHOR_END: get_example_test</code></pre>
+</p>
+</details>
+<ol>
+<li>
+<p>Build the OCI Runtime Spec you want to verify</p>
+<p>This testing framework automatically places <a href="developer/e2e/./runtimetest.html">runtimetest</a> in the container.
+In other words, you can test the processes you want to execute within a container by writing them in runtimetest.
+Therefore, it is common practice here to write an OCI Runtime Spec that executes <code>runtimetest</code>.</p>
+</li>
+</ol>
+<pre><code class="language-rust no_run noplayground">fn create_spec() -&gt; Result&lt;Spec&gt; {
+    SpecBuilder::default()
+        .process(
+            ProcessBuilder::default()
+                .args(
+                    ["runtimetest", "hello_world"]
+                        .iter()
+                        .map(|s| s.to_string())
+                        .collect::&lt;Vec&lt;String&gt;&gt;(),
+                )
+                .build()?,
+        )
+        .build()
+        .context("failed to create spec")
+}</code></pre>
+<ol start="2">
+<li>Prepare a function that returns a <code>TestResult</code>, which represents the result of the test.</li>
+</ol>
+<pre><code class="language-rust no_run noplayground">fn example_test() -&gt; TestResult {
+    let spec = test_result!(create_spec());
+    test_inside_container(spec, &amp;|_| Ok(()))
+}</code></pre>
+<ol start="3">
+<li>Create a <code>TestGroup</code> and register a test case you created</li>
+</ol>
+<pre><code class="language-rust no_run noplayground">pub fn get_example_test() -&gt; TestGroup {
+    let mut test_group = TestGroup::new("example");
+    let test1 = Test::new("hello world", Box::new(example_test));
+    test_group.add(vec![Box::new(test1)]);
+
+    test_group
+}</code></pre>
+<ol start="4">
+<li>Register the <code>TestGroup</code> you created to a <code>TestManager</code></li>
+</ol>
+<pre><code class="language-rust no_run noplayground">    let mut tm = TestManager::new();
+    let example = get_example_test();
+    tm.add_test_group(Box::new(example));</code></pre>
+<ol start="5">
+<li>Write the validation you want to run within a test container</li>
+</ol>
+<pre><code class="language-rust no_run noplayground">fn main() {
+    let spec = get_spec();
+    let args: Vec&lt;String&gt; = env::args().collect();
+    let execute_test = match args.get(1) {
+        Some(execute_test) =&gt; execute_test.to_string(),
+        None =&gt; return eprintln!("error due to execute test name not found"),
+    };
+
+    match &amp;*execute_test {
+        "hello_world" =&gt; tests::hello_world(&amp;spec),</code></pre>
+<pre><code class="language-rust no_run noplayground">pub fn hello_world(_spec: &amp;Spec) {
+    println!("Hello world");
+}</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="integration_test"><a class="header" href="#integration_test">integration_test</a></h1>
-<p><strong>Note</strong> that these tests resides in /tests/rust-integration-tests/integration_test at the time of writing.</p>
+<p><strong>Note</strong> that these tests resides in <code>/tests/integration_test/</code> at the time of writing.</p>
 <p>This crate contains the Rust port of OCI-runtime tools integration tests, which are used to test if the runtime works as per the OCI spec or not. Initially youki used the original implementation of these test provided in the OCI repository <a href="https://github.com/opencontainers/runtime-tools/tree/master/validation">here</a>. But those tests are written in Go, which made the developers depend on two language environments Rust and Go to compile youki and test it. The Validation tests themselves also have an optional dependency on node js to parse their output, which can make it a third language dependency.</p>
 <p>Other than that, those tests also showed some issues while running on some local systems, and thus running the tests would be difficult on local system. As the runtime is a complex piece of software, it becomes useful to have a set of tests that can be run with changes in code, so one can verify that change in one part of youki has not accidentally broken some other part of youki.</p>
 <p>Thus we decided to port the tests to Rust, and validate them, so that we have a set of unit tests as well of integration tests to validate the working of runtime. These tests are still under development, and you can check the <a href="https://github.com/containers/youki/issues/361">tracking issue</a> for more details. More details on working of these tests can be found at <a href="https://github.com/containers/youki/tree/main/crates/integration_test">https://github.com/containers/youki/tree/main/crates/integration_test</a>.</p>
 <p>As these tests are under development, these are validated on a standard runtime such as runc in the GitHub CI, so validate the tests themselves.</p>
 <h2 id="notes-2"><a class="header" href="#notes-2">Notes</a></h2>
 <h3 id="about-the-create-container-function"><a class="header" href="#about-the-create-container-function">About the create container function</a></h3>
-<p>The test_utils provides a <code>create_container</code> function which can be used to run the <code>youki create</code> command. It returns the child process struct, which can be either <code>wait()</code> or <code>wait_with_output()</code> to wait for it finishing. Unless you know what are you doing, it is recommended to call <code>wait()</code> on it, as otherwise the process will hang. As explained in the <a href="developer/../youki.html">youki docs</a> , the <code>youki create</code> process, after starting forks, and the forked process keeps waiting for another youki process to send it the <code>start</code> signal , and after receiving it, that forked process execs the container program. If you are simply trying to create a container, such as in case of <code>test_outside_runtime</code> then calling <code>wait_with_output()</code> will cause it to hang. If you are actually going to start a container, and need output from the container process, then you must keep the <code>Child struct</code> returned by <code>create</code> function and call <code>wait_with_output()</code> on it <strong>AFTER</strong> you have called the start command on that container, which will give you the <code>stdout</code> and <code>stderr</code> of the process running inside the container.</p>
+<p>The test_utils provides a <code>create_container</code> function which can be used to run the <code>youki create</code> command. It returns the child process struct, which can be either <code>wait()</code> or <code>wait_with_output()</code> to wait for it finishing. Unless you know what are you doing, it is recommended to call <code>wait()</code> on it, as otherwise the process will hang. As explained in the <a href="developer/e2e/../youki.html">youki docs</a> , the <code>youki create</code> process, after starting forks, and the forked process keeps waiting for another youki process to send it the <code>start</code> signal , and after receiving it, that forked process execs the container program. If you are simply trying to create a container, such as in case of <code>test_outside_runtime</code> then calling <code>wait_with_output()</code> will cause it to hang. If you are actually going to start a container, and need output from the container process, then you must keep the <code>Child struct</code> returned by <code>create</code> function and call <code>wait_with_output()</code> on it <strong>AFTER</strong> you have called the start command on that container, which will give you the <code>stdout</code> and <code>stderr</code> of the process running inside the container.</p>
 <p>To understand how this works, take a look at <a href="https://github.com/opencontainers/runc/blob/master/docs/terminals.md">handling stdio</a> of the runc, specially the <a href="https://github.com/opencontainers/runc/blob/master/docs/terminals.md#detached-pass-through">detached pass-through mode</a> section. As explained in it, we setup the stdio for the original youki process in <code>youki create</code> by setting the stdio to <code>Stdio::piped()</code> in the <code>create</code> function. Then we set the <code>terminal</code> option to <code>false</code> (which is the default anyway) in the spec, which makes it run in the pass-through mode. Then when the create process is done its work, and its forked process is waiting for the start signal, it uses the same stdio pipes. Thus calling <code>wait_with_output()</code> without starting will keep it hanged up, and after calling start, stdio of the program to be run inside the container can be obtained from the <code>youki create</code>'s process.</p>
 <h3 id="how-test-inside-container-works"><a class="header" href="#how-test-inside-container-works">How test inside container works</a></h3>
 <p>We use <code>test_inside_container</code> for making sure that the restrictions and constraints are uphold from inside the container process.
 For that, first whichever integration test needs to use it, must define the runtimetest as the container process in the spec, and then use <code>test_inside_container</code> function. It requires a function which will do the necessary setup for the tests that are to be run inside. Then the counterpart for the test should be added to the <code>runtimetest</code> crate, which will run inside the container and if there is any error, print it to the <code>stderr</code>. The <code>test_inside_container</code> function will wait for the tests to be over and then check the <code>stderr</code> to be empty. If it is not, the test is assumed to fail.</p>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="test_framework"><a class="header" href="#test_framework">test_framework</a></h1>
+<p><strong>Note</strong> that these tests resides in /tests/test_framework at the time of writing.</p>
+<p>This crate contains the testing framework specifically developed for porting the OCI integration test to rust. This contains structs to represent the individual tests, group of tests and a test manager that has responsibility to run tests. This Also exposes traits which can be used to implement custom test structs or test group structs if needed.</p>
+<p>By default the test groups are run in parallel using the <a href="https://www.crates.io/crates/crossbeam">crossbeam crate</a>, and the default test_group implementation also runs individual tests parallelly.</p>
+<p>Sometimes you might need to run the tests in a test group serially or in certain order, for example in case of testing container lifecycle, a container must be created and started before stopping it. In such cases, you will need to implement the respective traits on your own structs, so that you can have fine control over thr running of tests. Check the readme of the test_framework crate to see the struct and trait documentation <a href="https://github.com/containers/youki/tree/main/crates/test_framework">here</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="runtime-test"><a class="header" href="#runtime-test">Runtime Test</a></h1>
-<p><strong>Note</strong> that these tests resides in /tests/rust-integration-tests/runtimetest at the time of writing.</p>
+<p><strong>Note</strong> that these tests resides in /tests/runtimetest at the time of writing.</p>
 <p>This crate provides a binary which is used by integration tests to verify that the restrictions and constraints applied to the container are upheld by the container process, from inside the container process. This runs the tests one-by-one, and the failing test prints the error to the stderr.</p>
 <h2 id="notes-3"><a class="header" href="#notes-3">Notes</a></h2>
 <p>This binary must be compiled with the option of static linking to crt0 given to the rustc. If compiled without it, it will add a linking to /lib64/ld-linux-x86-64.so . The binary compiled this way cannot be run inside the container process, as they do not have access to /lib64/... Thus the runtime test must be statically linked to crt0.</p>
@@ -936,7 +1197,7 @@ For that, first whichever integration test needs to use it, must define the runt
 <p>Now runtimetest needs at least <code>oci-spec</code> and <code>nix</code> package for its operations, which are also dependencies of other packages in the workspace. Thus both of these, and recursively their dependencies must be compiled twice, each time, once for dynamic linking and once for static. The took a long time in the compilation stage, especially when developing / adding new tests. Separating runtimetest from the workspace allows it to have a separate target/ directory, where it can store the statically compiled dependencies, and the workspace can have its target/ directory, where it can store its dynamically compiled dependencies. That way only the crates which have changes need to be compiled (runtimetest or integration test), and not their dependencies.</p>
 <p>In case in future this separation is not required, or some other configuration is chosen, make sure the multiple compilation issue does not arise, or the advantages of new method outweigh the time spent in double compilation.</p>
 <p>To see if a binary can be run inside the container process, run</p>
-<pre><code class="language-console">readelf -l path/to/binary |grep &quot;program interpreter&quot;
+<pre><code class="language-console">readelf -l path/to/binary |grep "program interpreter"
 </code></pre>
 <p><code>[Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]</code> means that the binary is not statically linked, and cannot be run inside the container process. If the above command gives no output, that means it does not require any program interpreter and can be run inside the container.</p>
 <p>Another way is to run</p>
@@ -955,11 +1216,12 @@ For that, first whichever integration test needs to use it, must define the runt
 <li><a href="https://doc.rust-lang.org/cargo/reference/config.html">Rust cargo config for rustflags</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="containerd-integration-test-using-youki"><a class="header" href="#containerd-integration-test-using-youki">containerd integration test using youki</a></h1>
-<p>youki does not yet work with Kubernetes.
-Find the cause of not supporting Kubernetes by integration test of CRI Runtime.</p>
-<p><a href="https://github.com/containers/youki/issues/531">pass the integration test of containerd · Issue #531 · containers/youki</a></p>
 <h2 id="local"><a class="header" href="#local">local</a></h2>
-<pre><code class="language-console">make containerd-test
+<pre><code class="language-console">just containerd-test
+</code></pre>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="runtime-tools"><a class="header" href="#runtime-tools">runtime tools</a></h1>
+<h2 id="local-1"><a class="header" href="#local-1">local</a></h2>
+<pre><code class="language-console">just test-oci
 </code></pre>
 
                     </main>

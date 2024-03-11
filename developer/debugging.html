@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>Webassembly - Youki User and Developer Documentation</title>
+        <title>Debugging - Youki User and Developer Documentation</title>
 
 
         <!-- Custom HTML head -->
@@ -88,7 +88,7 @@
 
         <nav id="sidebar" class="sidebar" aria-label="Table of contents">
             <div class="sidebar-scrollbox">
-                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../youki.html">Youki</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="../user/introduction.html"><strong aria-hidden="true">1.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/basic_setup.html"><strong aria-hidden="true">1.1.</strong> Basic Setup</a></li><li class="chapter-item expanded "><a href="../user/basic_usage.html"><strong aria-hidden="true">1.2.</strong> Basic Usage</a></li><li class="chapter-item expanded "><a href="../user/crates.html"><strong aria-hidden="true">1.3.</strong> Crates provided</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/libcgroups.html"><strong aria-hidden="true">1.3.1.</strong> libcgroups</a></li><li class="chapter-item expanded "><a href="../user/libcontainer.html"><strong aria-hidden="true">1.3.2.</strong> libcontainer</a></li><li class="chapter-item expanded "><a href="../user/liboci_cli.html"><strong aria-hidden="true">1.3.3.</strong> liboci-cli</a></li><li class="chapter-item expanded "><a href="../user/libseccomp.html"><strong aria-hidden="true">1.3.4.</strong> libseccomp</a></li></ol></li><li class="chapter-item expanded "><a href="../user/webassembly.html" class="active"><strong aria-hidden="true">1.4.</strong> Webassembly</a></li><li class="spacer"></li></ol></li><li class="chapter-item expanded "><a href="../developer/introduction.html"><strong aria-hidden="true">2.</strong> Developer Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../developer/basics.html"><strong aria-hidden="true">2.1.</strong> Basics</a></li><li class="chapter-item expanded "><a href="../developer/unwritten_rules.html"><strong aria-hidden="true">2.2.</strong> Unwritten Rules</a></li><li class="chapter-item expanded "><a href="../developer/good_places_to_start.html"><strong aria-hidden="true">2.3.</strong> Good places to start</a></li><li class="chapter-item expanded "><a href="../developer/documentation_mdbook.html"><strong aria-hidden="true">2.4.</strong> This Documentation</a></li><li class="chapter-item expanded "><a href="../developer/repo_structure.html"><strong aria-hidden="true">2.5.</strong> Repository Structure</a></li><li class="chapter-item expanded "><a href="../developer/debugging.html"><strong aria-hidden="true">2.6.</strong> Debugging</a></li><li class="chapter-item expanded "><a href="../developer/crate_specific_information.html"><strong aria-hidden="true">2.7.</strong> Crate Specific Information</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../developer/libcgroups.html"><strong aria-hidden="true">2.7.1.</strong> libcgroups</a></li><li class="chapter-item expanded "><a href="../developer/libcontainer.html"><strong aria-hidden="true">2.7.2.</strong> libcontainer</a></li><li class="chapter-item expanded "><a href="../developer/liboci_cli.html"><strong aria-hidden="true">2.7.3.</strong> liboci-cli</a></li><li class="chapter-item expanded "><a href="../developer/libseccomp.html"><strong aria-hidden="true">2.7.4.</strong> libseccomp</a></li><li class="chapter-item expanded "><a href="../developer/youki.html"><strong aria-hidden="true">2.7.5.</strong> youki</a></li></ol></li><li class="chapter-item expanded "><a href="../developer/e2e/e2e_tests.html"><strong aria-hidden="true">2.8.</strong> e2e tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../developer/e2e/rust_oci_test.html"><strong aria-hidden="true">2.8.1.</strong> rust oci tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../developer/e2e/integration_test.html"><strong aria-hidden="true">2.8.1.1.</strong> integration_test</a></li><li class="chapter-item expanded "><a href="../developer/e2e/test_framework.html"><strong aria-hidden="true">2.8.1.2.</strong> test_framework</a></li><li class="chapter-item expanded "><a href="../developer/e2e/runtimetest.html"><strong aria-hidden="true">2.8.1.3.</strong> runtimetest</a></li></ol></li><li class="chapter-item expanded "><a href="../developer/e2e/containerd_integration_test_using_youki.html"><strong aria-hidden="true">2.8.2.</strong> containerd integration test</a></li><li class="chapter-item expanded "><a href="../developer/e2e/runtime_tools.html"><strong aria-hidden="true">2.8.3.</strong> runtime tools</a></li></ol></li></ol></li></ol>
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../youki.html">Youki</a></li><li class="spacer"></li><li class="chapter-item expanded "><a href="../user/introduction.html"><strong aria-hidden="true">1.</strong> User Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/basic_setup.html"><strong aria-hidden="true">1.1.</strong> Basic Setup</a></li><li class="chapter-item expanded "><a href="../user/basic_usage.html"><strong aria-hidden="true">1.2.</strong> Basic Usage</a></li><li class="chapter-item expanded "><a href="../user/crates.html"><strong aria-hidden="true">1.3.</strong> Crates provided</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/libcgroups.html"><strong aria-hidden="true">1.3.1.</strong> libcgroups</a></li><li class="chapter-item expanded "><a href="../user/libcontainer.html"><strong aria-hidden="true">1.3.2.</strong> libcontainer</a></li><li class="chapter-item expanded "><a href="../user/liboci_cli.html"><strong aria-hidden="true">1.3.3.</strong> liboci-cli</a></li><li class="chapter-item expanded "><a href="../user/libseccomp.html"><strong aria-hidden="true">1.3.4.</strong> libseccomp</a></li></ol></li><li class="chapter-item expanded "><a href="../user/webassembly.html"><strong aria-hidden="true">1.4.</strong> Webassembly</a></li><li class="spacer"></li></ol></li><li class="chapter-item expanded "><a href="../developer/introduction.html"><strong aria-hidden="true">2.</strong> Developer Documentation</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../developer/basics.html"><strong aria-hidden="true">2.1.</strong> Basics</a></li><li class="chapter-item expanded "><a href="../developer/unwritten_rules.html"><strong aria-hidden="true">2.2.</strong> Unwritten Rules</a></li><li class="chapter-item expanded "><a href="../developer/good_places_to_start.html"><strong aria-hidden="true">2.3.</strong> Good places to start</a></li><li class="chapter-item expanded "><a href="../developer/documentation_mdbook.html"><strong aria-hidden="true">2.4.</strong> This Documentation</a></li><li class="chapter-item expanded "><a href="../developer/repo_structure.html"><strong aria-hidden="true">2.5.</strong> Repository Structure</a></li><li class="chapter-item expanded "><a href="../developer/debugging.html" class="active"><strong aria-hidden="true">2.6.</strong> Debugging</a></li><li class="chapter-item expanded "><a href="../developer/crate_specific_information.html"><strong aria-hidden="true">2.7.</strong> Crate Specific Information</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../developer/libcgroups.html"><strong aria-hidden="true">2.7.1.</strong> libcgroups</a></li><li class="chapter-item expanded "><a href="../developer/libcontainer.html"><strong aria-hidden="true">2.7.2.</strong> libcontainer</a></li><li class="chapter-item expanded "><a href="../developer/liboci_cli.html"><strong aria-hidden="true">2.7.3.</strong> liboci-cli</a></li><li class="chapter-item expanded "><a href="../developer/libseccomp.html"><strong aria-hidden="true">2.7.4.</strong> libseccomp</a></li><li class="chapter-item expanded "><a href="../developer/youki.html"><strong aria-hidden="true">2.7.5.</strong> youki</a></li></ol></li><li class="chapter-item expanded "><a href="../developer/e2e/e2e_tests.html"><strong aria-hidden="true">2.8.</strong> e2e tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../developer/e2e/rust_oci_test.html"><strong aria-hidden="true">2.8.1.</strong> rust oci tests</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../developer/e2e/integration_test.html"><strong aria-hidden="true">2.8.1.1.</strong> integration_test</a></li><li class="chapter-item expanded "><a href="../developer/e2e/test_framework.html"><strong aria-hidden="true">2.8.1.2.</strong> test_framework</a></li><li class="chapter-item expanded "><a href="../developer/e2e/runtimetest.html"><strong aria-hidden="true">2.8.1.3.</strong> runtimetest</a></li></ol></li><li class="chapter-item expanded "><a href="../developer/e2e/containerd_integration_test_using_youki.html"><strong aria-hidden="true">2.8.2.</strong> containerd integration test</a></li><li class="chapter-item expanded "><a href="../developer/e2e/runtime_tools.html"><strong aria-hidden="true">2.8.3.</strong> runtime tools</a></li></ol></li></ol></li></ol>
             </div>
             <div id="sidebar-resize-handle" class="sidebar-resize-handle">
                 <div class="sidebar-resize-indicator"></div>
@@ -173,97 +173,100 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="webassembly"><a class="header" href="#webassembly">Webassembly</a></h1>
-<p>There are 3 things you need to do to run a WebAssembly module with youki.</p>
+                        <h1 id="debugging"><a class="header" href="#debugging">Debugging</a></h1>
+<p>Since Youki uses pipe and double-fork in the creating phase, it is hard to debug what happened.
+You might encounter the error message, "Broken pipe ..." Unfortunately,
+this error message has only information that a child process exists with an error for some reason.</p>
+<p>This section will give some tips to debug youki to know what happens in the child processes.</p>
+<h1 id="bpftrace"><a class="header" href="#bpftrace">bpftrace</a></h1>
+<p><a href="https://github.com/iovisor/bpftrace">bpftrace</a> is an eBPF based tool.
+In the case of youki, you can catch the system calls youki issued.</p>
+<p>For example, if you catch write system calls, you can see the log output until the middle of process.
+It allows you to do something similar to print debugging.</p>
+<p><em>How to debug</em></p>
 <ol>
-<li>Build youki with wasm-wasmer feature flag enabled</li>
-<li>Build a container image with the WebAssembly module</li>
-<li>Run the container with youki</li>
+<li>
+<p>You need to install bpftrace, please refer to <a href="https://github.com/iovisor/bpftrace/blob/master/INSTALL.md">the official documentation</a> to know how to install it.</p>
+</li>
+<li>
+<p>Before running the process or comannd you want to debug, run the following command in another terminal.</p>
+<p>You need the root privilege to run it.</p>
+<pre><code class="language-console">$ cd ${youki_repo}
+$ just hack-bpftrace
+</code></pre>
+</li>
+<li>
+<p>Run the command you want to debug.</p>
+</li>
 </ol>
-<h2 id="build-youki-with-wasm-wasmedge-wasm-wasmer-or-wasm-wasmtime-feature-flag-enabled"><a class="header" href="#build-youki-with-wasm-wasmedge-wasm-wasmer-or-wasm-wasmtime-feature-flag-enabled">Build youki with <code>wasm-wasmedge</code>, <code>wasm-wasmer</code>, or <code>wasm-wasmtime</code> feature flag enabled</a></h2>
-<ul>
+<p><em>For example</em></p>
+<ol>
 <li>
-<p>Run <code>build.sh</code> with <code>-f wasm-wasmedge</code> option.</p>
-<pre><code class="language-bash">./scripts/build.sh -o . -r -f wasm-wasmedge
+<p>Run the bpftrace script.</p>
+<pre><code class="language-console">$ just hack-bpftrace
+BPFTRACE_STRLEN=120 ./hack/debug.bt
+Attaching 13 probes...
+Tracing Youki syscalls... Hit Ctrl-C to end.
+TIME                 COMMAND PID      EVENT     CONTENT
 </code></pre>
 </li>
 <li>
-<p>Run <code>build.sh</code> with <code>-f wasm-wasmer</code> option.</p>
-<pre><code class="language-bash">./scripts/build.sh -o . -r -f wasm-wasmer
-</code></pre>
-</li>
-<li>
-<p>Run <code>build.sh</code> with <code>-f wasm-wasmtime</code> option.</p>
-<pre><code class="language-bash">./scripts/build.sh -o . -r -f wasm-wasmtime
-</code></pre>
-</li>
-</ul>
-<h2 id="build-a-container-image-with-the-webassembly-module"><a class="header" href="#build-a-container-image-with-the-webassembly-module">Build a container image with the WebAssembly module</a></h2>
-<p>If you want to run a webassembly module with youki, your config.json has to include either <strong>runc.oci.handler</strong> or <strong>module.wasm.image/variant=compat"</strong>.</p>
-<p>It also needs to specify a valid .wasm (webassembly binary) or .wat (webassembly test) module as entrypoint for the container. If a wat module is specified it will be compiled to a wasm module by youki before it is executed. The module also needs to be available in the root filesystem of the container obviously.</p>
-<pre><code class="language-json">"ociVersion": "1.0.2-dev",
-"annotations": {
-    "run.oci.handler": "wasm"
-},
-"process": {
-    "args": [
-        "hello.wasm",
-        "hello",
-        "world"
-    ],
+<p>Run the Kubernetes cluster using kind with youki</p>
+<pre><code class="language-console">$ cd ${youki_repo}
+$ just test-kind
+docker buildx build --output=bin/ -f tests/k8s/Dockerfile --target kind-bin .
 ...
-}
+Creating cluster "youki" ...
 ...
+kubectl --context=kind-youki apply -f tests/k8s/deploy.yaml
+runtimeclass.node.k8s.io/youki created
+deployment.apps/nginx-deployment created
+...
+kubectl --context=kind-youki delete -f tests/k8s/deploy.yaml
+runtimeclass.node.k8s.io "youki" deleted
+deployment.apps "nginx-deployment" deleted
 </code></pre>
-<h3 id="compile-a-sample-wasm-module"><a class="header" href="#compile-a-sample-wasm-module">Compile a sample wasm module</a></h3>
-<p>A simple wasm module can be created by running</p>
-<pre><code class="language-console">rustup target add wasm32-wasi
-cargo new wasm-module --bin
-cd ./wasm-module
-vi src/main.rs
-</code></pre>
-<pre><pre class="playground"><code class="language-rust">fn main() {
-    println!("Printing args");
-    for arg in std::env::args().skip(1) {
-        println!("{}", arg);
-    }
+</li>
+<li>
+<p>Returning to the first command executed, the system calls youki issued are caught and logged.</p>
+<pre><code class="language-console">$ just hack-bpftrace
+BPFTRACE_STRLEN=120 ./hack/debug.bt
+Attaching 13 probes...
+Tracing Youki syscalls... Hit Ctrl-C to end.
+TIME                 COMMAND PID      EVENT     CONTENT
+207033348942           youki 13743    open      errno=2, fd=-1, file=/opt/containerd/lib/glibc-hwcaps/x86-64-v3/libc.so.6
+...
+207035462044           youki 13743    open      errno=0, fd=3, file=/proc/self/exe
+207035478523           youki 13743    write     fd=4, ELF
+207066996623               4 13743    open      errno=2, fd=-1, file=/opt/containerd/lib/glibc-hwcaps/x86-64-v3/libc.so.6
+...
+207070130175               4 13743    clone3
+207070418829 youki:[1:INTER] 13747    write     fd=4, {"timestamp":"2023-09-24T10:47:07.427846Z","level":"INFO","message":"cgroup manager V2 will be used","target":"libcgrou
+...
+207084948440 youki:[1:INTER] 13747    clone3
+207085058811 youki:[1:INTER] 13747    write     fd=4, {"timestamp":"2023-09-24T10:47:07.442502Z","level":"DEBUG","message":"sending init pid (Pid(1305))","target":"libcontai
+207085343170  youki:[2:INIT] 13750    write     fd=4, {"timestamp":"2023-09-24T10:47:07.442746Z","level":"DEBUG","message":"unshare or setns: LinuxNamespace { typ: Uts, path
+...
+207088256843  youki:[2:INIT] 13750    pivt_root new_root=/run/containerd/io.containerd.runtime.v2.task/k8s.io/0fea8cf5f8d1619a35ca67fd6fa73d8d7c8fc70ac2ed43ee2ac2f8610bb938f6/r, put_old=/run/containerd/io.containerd.runtime.v2.task/k8s.io/0fea8cf5f8d1619a35ca67fd6fa73d8d7c8fc70ac2ed43ee2ac2f8610bb938f6/r
+...
+207097207551  youki:[2:INIT] 13750    write     fd=4, {"timestamp":"2023-09-24T10:47:07.454645Z","level":"DEBUG","message":"found executable in executor","executable":"\"/pa
+...
+207139391811  youki:[2:INIT] 13750    write     fd=4, {"timestamp":"2023-09-24T10:47:07.496815Z","level":"DEBUG","message":"received: start container","target":"libcontainer
+207139423243  youki:[2:INIT] 13750    write     fd=4, {"timestamp":"2023-09-24T10:47:07.496868Z","level":"DEBUG","message":"executing workload with default handler","target"
 
-    println!("Printing envs");
-    for envs in std::env::vars() {
-        println!("{:?}", envs);
-    }  
-}</code></pre></pre>
-<p>Then compile the program to WASI.</p>
-<pre><code class="language-console">cargo build --target wasm32-wasi
 </code></pre>
-<h3 id="build-a-container-image-with-the-module"><a class="header" href="#build-a-container-image-with-the-module">Build a container image with the module</a></h3>
-<p>Create a Dockerfile.</p>
-<pre><code class="language-console">vi Dockerfile
-</code></pre>
-<pre><code class="language-Dockerfile">FROM scratch
-COPY target/wasm32-wasi/debug/wasm-module.wasm /
-ENTRYPOINT ["wasm-module.wasm"]
-</code></pre>
-<p>Then build a container image with <code>module.wasm.image/variant=compat</code> annotation. <sup class="footnote-reference"><a href="#1">1</a></sup></p>
-<pre><code class="language-console">sudo buildah build --annotation "module.wasm.image/variant=compat" -t wasm-module .
-</code></pre>
-<h2 id="run-the-wasm-module-with-youki-and-podman"><a class="header" href="#run-the-wasm-module-with-youki-and-podman">Run the wasm module with youki and podman</a></h2>
-<p>Run podman with youki as runtime. <sup class="footnote-reference"><a href="#1">1</a></sup></p>
-<pre><code class="language-bash">sudo podman --runtime /PATH/WHARE/YOU/BUILT/WITH/WASM-WASMER/youki run localhost/wasm-module 1 2 3
-</code></pre>
-<div class="footnote-definition" id="1"><sup class="footnote-definition-label">1</sup>
-<p>You might need <code>sudo</code> because of <a href="https://github.com/containers/youki/issues/719">#719</a>.</p>
-</div>
+</li>
+</ol>
 
                     </main>
 
                     <nav class="nav-wrapper" aria-label="Page navigation">
                         <!-- Mobile navigation buttons -->
-                            <a rel="prev" href="../user/libseccomp.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                            <a rel="prev" href="../developer/repo_structure.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                                 <i class="fa fa-angle-left"></i>
                             </a>
 
-                            <a rel="next prefetch" href="../developer/introduction.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                            <a rel="next prefetch" href="../developer/crate_specific_information.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                                 <i class="fa fa-angle-right"></i>
                             </a>
 
@@ -273,11 +276,11 @@ ENTRYPOINT ["wasm-module.wasm"]
             </div>
 
             <nav class="nav-wide-wrapper" aria-label="Page navigation">
-                    <a rel="prev" href="../user/libseccomp.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                    <a rel="prev" href="../developer/repo_structure.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
                         <i class="fa fa-angle-left"></i>
                     </a>
 
-                    <a rel="next prefetch" href="../developer/introduction.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                    <a rel="next prefetch" href="../developer/crate_specific_information.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
                         <i class="fa fa-angle-right"></i>
                     </a>
             </nav>
