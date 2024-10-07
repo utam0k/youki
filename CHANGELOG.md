@@ -1,5 +1,7 @@
 # Changelog
 
+## [v0.4.2](https://github.com/utam0k/youki/compare/v0.4.1...v0.4.2) - 2024-10-07
+
 ## [v0.4.1](https://github.com/containers/youki/compare/v0.4.0...v0.4.1) - 2024-09-02
 ### 🧪 Test improvements and Misc Fixes
 - prepare for version 0.4.1 by @YJDoc2 in https://github.com/containers/youki/pull/2897
