@@ -27,7 +27,7 @@ tracing = { version = "0.1.40", features = ["attributes"]}
 tracing-subscriber = { version = "0.3.18", features = ["json", "env-filter"] }
 
 [dependencies.clap]
-version = "4.1.6"
+version = "4.5.13"
 default-features = false
 features = ["std", "suggestions", "derive", "cargo", "help", "usage", "error-context"]
 
