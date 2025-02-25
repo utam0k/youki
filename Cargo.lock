@@ -2047,7 +2047,7 @@ dependencies = [
  "prctl",
  "procfs",
  "quickcheck",
- "rand 0.8.5",
+ "rand 0.9.0",
  "regex",
  "rust-criu",
  "safe-path",
