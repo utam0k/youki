@@ -1336,9 +1336,9 @@ checksum = "1d674e81391d1e1ab681a28d99df07927c6d4aa5b027d7da16ba32d1d21ecd99"
 
 [[package]]
 name = "flate2"
-version = "1.1.0"
+version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11faaf5a5236997af9848be0bef4db95824b1d534ebc64d0f0c6cf3e67bd38dc"
+checksum = "7ced92e76e966ca2fd84c8f7aa01a4aea65b0eb6648d72f7c8f3e2764a67fece"
 dependencies = [
  "crc32fast",
  "miniz_oxide 0.8.5",
@@ -2325,9 +2325,9 @@ dependencies = [
 
 [[package]]
 name = "nc"
-version = "0.9.5"
+version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34566634a278b9af0f62b872339d884ea689982514825ba306705f264038144e"
+checksum = "56c6d92d33b290df8a962fbf778711d529b11c92dc060cd675f1ce45a9a50977"
 dependencies = [
  "cc",
 ]
