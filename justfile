@@ -26,6 +26,10 @@ runtimetest:
 contest:
     {{ cwd }}/scripts/build.sh -o {{ cwd }} -r -c contest
 
+# install youki to /usr/local/sbin
+install:
+    install -D -m 0755 {{ cwd }}/youki "${PREFIX-/usr/local/sbin}/youki"
+
 # Tests
 
 # run integration tests
@@ -54,12 +58,12 @@ test-oci:
     {{ cwd }}/scripts/oci_integration_tests.sh {{ cwd }}
 
 # run rust oci integration tests
-test-contest: youki-release contest
-    sudo {{ cwd }}/scripts/contest.sh {{ cwd }}/youki
+test-contest *TESTNAME: youki-release contest
+    sudo {{ cwd }}/scripts/contest.sh {{ cwd }}/youki {{TESTNAME}}
 
 # validate rust oci integration tests on runc
-validate-contest-runc: contest
-    sudo RUNTIME_KIND="runc" {{ cwd }}/scripts/contest.sh runc
+validate-contest-runc *TESTNAME: contest
+    sudo RUNTIME_KIND="runc" {{ cwd }}/scripts/contest.sh runc {{TESTNAME}}
 
 # test podman rootless works with youki
 test-rootless-podman:
@@ -69,14 +73,18 @@ test-rootless-podman:
 test-dind:
     {{ cwd }}/tests/dind/run.sh
 
+# test runc compatibility
+test-runc-comp *RUNTIME_BINARY:
+    {{ cwd }}/tests/runc/runc_integration_test.sh {{RUNTIME_BINARY}}
+
 # run containerd integration tests
 containerd-test: youki-dev
-    VAGRANT_VAGRANTFILE=Vagrantfile.containerd2youki vagrant up
-    VAGRANT_VAGRANTFILE=Vagrantfile.containerd2youki vagrant provision --provision-with test
+    vagrant up containerd2youki
+    vagrant provision containerd2youki --provision-with test
 
 # run containerd integration tests
 clean-containerd-test:
-    VAGRANT_VAGRANTFILE=Vagrantfile.containerd2youki vagrant destroy
+    vagrant destroy containerd2youki
 
 [private]
 kind-cluster: bin-kind
@@ -202,3 +210,6 @@ version-up version:
     sed -i "s/{{version}}/$NEXT_VERSION/g" .tagpr
     # Need to update the lockfile.
     cargo check
+
+contest-list: contest
+   {{ cwd }}/contest list

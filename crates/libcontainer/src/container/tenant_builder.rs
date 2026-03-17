@@ -10,21 +10,22 @@ use std::str::FromStr;
 
 use caps::Capability;
 use nix::fcntl::OFlag;
-use nix::unistd::{pipe2, read, Pid};
+use nix::unistd::{Pid, pipe2, read};
 use oci_spec::runtime::{
     Capabilities as SpecCapabilities, Capability as SpecCapability, LinuxBuilder,
     LinuxCapabilities, LinuxCapabilitiesBuilder, LinuxNamespace, LinuxNamespaceBuilder,
-    LinuxNamespaceType, LinuxSchedulerPolicy, Process, ProcessBuilder, Spec,
+    LinuxNamespaceType, LinuxSchedulerPolicy, Process, ProcessBuilder, Spec, UserBuilder,
 };
 use procfs::process::Namespace;
 
-use super::builder::ContainerBuilder;
 use super::Container;
+use super::builder::ContainerBuilder;
 use crate::capabilities::CapabilityExt;
 use crate::container::builder_impl::ContainerBuilderImpl;
 use crate::error::{ErrInvalidSpec, LibcontainerError, MissingSpecError};
 use crate::notify_socket::NotifySocket;
 use crate::process::args::ContainerType;
+use crate::syscall::syscall::create_syscall;
 use crate::user_ns::UserNamespaceConfig;
 use crate::{tty, utils};
 
@@ -44,6 +45,9 @@ pub struct TenantContainerBuilder {
     process: Option<PathBuf>,
     detached: bool,
     as_sibling: bool,
+    additional_gids: Vec<u32>,
+    user: Option<u32>,
+    group: Option<u32>,
 }
 
 /// This is a helper function to get capabilities for tenant container, based on
@@ -136,6 +140,9 @@ impl TenantContainerBuilder {
             process: None,
             detached: false,
             as_sibling: false,
+            additional_gids: vec![],
+            user: None,
+            group: None,
         }
     }
 
@@ -181,6 +188,21 @@ impl TenantContainerBuilder {
 
     pub fn with_detach(mut self, detached: bool) -> Self {
         self.detached = detached;
+        self
+    }
+
+    pub fn with_additional_gids(mut self, gids: Vec<u32>) -> Self {
+        self.additional_gids = gids;
+        self
+    }
+
+    pub fn with_user(mut self, user: Option<u32>) -> Self {
+        self.user = user;
+        self
+    }
+
+    pub fn with_group(mut self, group: Option<u32>) -> Self {
+        self.group = group;
         self
     }
 
@@ -307,7 +329,12 @@ impl TenantContainerBuilder {
                 match iop_class_res {
                     Ok(iop_class) => {
                         if !(0..=7).contains(&priority) {
-                            tracing::error!(?priority, "io priority '{}' not between 0 and 7 (inclusive), class '{}' not in (IO_PRIO_CLASS_RT,IO_PRIO_CLASS_BE,IO_PRIO_CLASS_IDLE)",priority, iop_class);
+                            tracing::error!(
+                                ?priority,
+                                "io priority '{}' not between 0 and 7 (inclusive), class '{}' not in (IO_PRIO_CLASS_RT,IO_PRIO_CLASS_BE,IO_PRIO_CLASS_IDLE)",
+                                priority,
+                                iop_class
+                            );
                             Err(ErrInvalidSpec::IoPriority)?;
                         }
                     }
@@ -339,7 +366,10 @@ impl TenantContainerBuilder {
                         && (*policy != LinuxSchedulerPolicy::SchedFifo
                             && *policy != LinuxSchedulerPolicy::SchedRr)
                     {
-                        tracing::error!(?policy,"scheduler.priority can only be specified for SchedFIFO or SchedRR policy");
+                        tracing::error!(
+                            ?policy,
+                            "scheduler.priority can only be specified for SchedFIFO or SchedRR policy"
+                        );
                         Err(ErrInvalidSpec::Scheduler)?;
                     }
                 }
@@ -375,7 +405,14 @@ impl TenantContainerBuilder {
             }
         }
 
-        utils::validate_spec_for_new_user_ns(spec)?;
+        if let Some(mounts) = spec.mounts() {
+            utils::validate_mount_options(mounts)?;
+        }
+
+        let syscall = create_syscall();
+        utils::validate_spec_for_new_user_ns(spec, &*syscall)?;
+        utils::validate_spec_for_net_devices(spec, &*syscall)
+            .map_err(LibcontainerError::NetDevicesError)?;
 
         Ok(())
     }
@@ -384,7 +421,7 @@ impl TenantContainerBuilder {
         let container = Container::load(container_dir)?;
         if !container.can_exec() {
             tracing::error!(status = ?container.status(), "cannot exec as container");
-            return Err(LibcontainerError::IncorrectStatus);
+            return Err(LibcontainerError::IncorrectStatus(container.status()));
         }
 
         Ok(container)
@@ -398,11 +435,23 @@ impl TenantContainerBuilder {
         let process = if let Some(process) = &self.process {
             self.get_process(process)?
         } else {
+            // Use the spec's process env as the baseline for exec.
+            let spec_env = spec
+                .process()
+                .as_ref()
+                .and_then(|p| p.env().as_ref().cloned())
+                .unwrap_or_default();
             let mut process_builder = ProcessBuilder::default()
                 .args(self.get_args()?)
-                .env(self.get_environment());
+                .env(self.get_environment(spec_env));
             if let Some(cwd) = self.get_working_dir()? {
                 process_builder = process_builder.cwd(cwd);
+            }
+
+            if let Some(process) = spec.process() {
+                if let Some(cpu_affinity) = process.exec_cpu_affinity() {
+                    process_builder = process_builder.exec_cpu_affinity(cpu_affinity.clone());
+                }
             }
 
             if let Some(no_new_priv) = self.get_no_new_privileges() {
@@ -411,6 +460,22 @@ impl TenantContainerBuilder {
 
             let capabilities = get_capabilities(&self.capabilities, spec)?;
             process_builder = process_builder.capabilities(capabilities);
+
+            let mut user_builder = UserBuilder::default();
+
+            if !self.additional_gids.is_empty() {
+                user_builder = user_builder.additional_gids(self.additional_gids.clone());
+            }
+
+            if let Some(uid) = self.user {
+                user_builder = user_builder.uid(uid);
+            }
+
+            if let Some(gid) = self.group {
+                user_builder = user_builder.gid(gid);
+            }
+
+            process_builder = process_builder.user(user_builder.build()?);
 
             process_builder.build()?
         };
@@ -426,9 +491,14 @@ impl TenantContainerBuilder {
         let spec_linux = spec.linux().as_ref().unwrap();
         let mut linux_builder = LinuxBuilder::default().namespaces(ns);
 
-        if let Some(ref cgroup_path) = spec_linux.cgroups_path() {
+        if let Some(cgroup_path) = spec_linux.cgroups_path() {
             linux_builder = linux_builder.cgroups_path(cgroup_path.clone());
         }
+
+        if let Some(personality) = spec_linux.personality() {
+            linux_builder = linux_builder.personality(personality.clone());
+        }
+
         let linux = linux_builder.build()?;
         spec.set_process(Some(process)).set_linux(Some(linux));
 
@@ -471,8 +541,27 @@ impl TenantContainerBuilder {
         Ok(self.args.clone())
     }
 
-    fn get_environment(&self) -> Vec<String> {
-        self.env.iter().map(|(k, v)| format!("{k}={v}")).collect()
+    /// Builds the environment for an exec process.
+    /// The spec's env vars are used as the baseline, and env vars provided to the
+    /// builder, such as those from the CLI, override entries with the same key.
+    /// This follows runc's behavior.
+    /// See <https://github.com/youki-dev/youki/issues/3428>.
+    fn get_environment(&self, spec_env: Vec<String>) -> Vec<String> {
+        // Start with spec env, skipping any vars that the CLI overrides.
+        let mut env: Vec<String> = spec_env
+            .into_iter()
+            .filter(|entry| {
+                let key = entry.split('=').next().unwrap_or("");
+                !self.env.contains_key(key)
+            })
+            .collect();
+
+        // Append CLI overrides.
+        for (k, v) in &self.env {
+            env.push(format!("{k}={v}"));
+        }
+
+        env
     }
 
     fn get_no_new_privileges(&self) -> Option<bool> {
@@ -538,15 +627,13 @@ impl TenantContainerBuilder {
 }
 
 #[cfg(test)]
-mod test {
-
+mod tests {
     use caps::Capability as Cap;
-    use oci_spec::runtime::{
-        Capabilities, Capability as SpecCap, LinuxCapabilities, ProcessBuilder, Spec, SpecBuilder,
-    };
+    use oci_spec::runtime::{Capabilities, Capability as SpecCap, SpecBuilder};
 
-    use super::{get_capabilities, LibcontainerError};
+    use super::*;
     use crate::capabilities::CapabilityExt;
+    use crate::syscall::syscall::SyscallType;
 
     fn get_spec(caps: LinuxCapabilities) -> Spec {
         SpecBuilder::default()
@@ -577,6 +664,19 @@ mod test {
             .set_ambient(None);
         t
     }
+
+    /// Helper to build a minimal TenantContainerBuilder with the given CLI env.
+    fn builder_with_env(env: &[(&str, &str)]) -> TenantContainerBuilder {
+        let base = ContainerBuilder::new("test".to_string(), SyscallType::default());
+        let env_map: HashMap<String, String> = env
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+
+        TenantContainerBuilder::new(base).with_env(env_map)
+    }
+
+    // --- capabilities tests ---
 
     // if there are no existing capabilities, then tenant can only
     // set effective, bounding and permitted caps ; not inheritable or ambient
@@ -688,5 +788,49 @@ mod test {
         assert_eq!(caps, expected_caps);
 
         Ok(())
+    }
+
+    // --- environment tests ---
+
+    #[test]
+    fn env_inherits_spec_vars() {
+        let b = builder_with_env(&[]);
+        let spec_env = vec!["PATH=/usr/bin".to_string(), "AAA=bbb".to_string()];
+        let result = b.get_environment(spec_env);
+        assert!(result.contains(&"PATH=/usr/bin".to_string()));
+        assert!(result.contains(&"AAA=bbb".to_string()));
+    }
+
+    #[test]
+    fn builder_env_overrides_spec() {
+        let b = builder_with_env(&[("AAA", "override")]);
+        let spec_env = vec!["PATH=/usr/bin".to_string(), "AAA=bbb".to_string()];
+        let result = b.get_environment(spec_env);
+        assert!(result.contains(&"PATH=/usr/bin".to_string()));
+        assert!(result.contains(&"AAA=override".to_string()));
+        assert!(!result.contains(&"AAA=bbb".to_string()));
+    }
+
+    #[test]
+    fn builder_env_adds_new_vars() {
+        let b = builder_with_env(&[("NEW_VAR", "hello")]);
+        let spec_env = vec!["PATH=/usr/bin".to_string()];
+        let result = b.get_environment(spec_env);
+        assert!(result.contains(&"PATH=/usr/bin".to_string()));
+        assert!(result.contains(&"NEW_VAR=hello".to_string()));
+    }
+
+    #[test]
+    fn empty_spec_env_uses_builder_env_only() {
+        let b = builder_with_env(&[("FOO", "bar")]);
+        let result = b.get_environment(Vec::new());
+        assert_eq!(result, vec!["FOO=bar".to_string()]);
+    }
+
+    #[test]
+    fn no_env_at_all() {
+        let b = builder_with_env(&[]);
+        let result = b.get_environment(Vec::new());
+        assert!(result.is_empty());
     }
 }
