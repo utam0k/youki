@@ -2,6 +2,8 @@ use std::any::Any;
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::ffi::{OsStr, OsString};
+use std::os::fd::{AsRawFd, BorrowedFd, RawFd};
+use std::os::unix::io::OwnedFd;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -12,7 +14,8 @@ use nix::sys::stat::{Mode, SFlag};
 use nix::unistd::{Gid, Uid};
 use oci_spec::runtime::PosixRlimit;
 
-use super::{linux, Result, Syscall};
+use super::super::config::PersonalityDomain;
+use super::{Result, Syscall, linux};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct MountArgs {
@@ -21,6 +24,27 @@ pub struct MountArgs {
     pub fstype: Option<String>,
     pub flags: MsFlags,
     pub data: Option<String>,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct MountFromFdArgs {
+    pub fd: i32,
+    pub target: PathBuf,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct MoveMountArgs {
+    pub from_dirfd: i32,
+    pub from_path: Option<OsString>,
+    pub to_dirfd: i32,
+    pub to_path: Option<OsString>,
+    pub flags: u32,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct FsopenArgs {
+    pub fsname: Option<String>,
+    pub flags: u32,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -45,6 +69,13 @@ pub struct IoPriorityArgs {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+pub struct MemPolicyArgs {
+    pub mode: i32,
+    pub nodemask: Vec<libc::c_ulong>, // Store the nodemask vector for testing
+    pub maxnode: u64,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct UMount2Args {
     pub target: PathBuf,
     pub flags: MntFlags,
@@ -62,6 +93,7 @@ pub enum ArgName {
     Namespace,
     Unshare,
     Mount,
+    MountFromFd,
     Symlink,
     Mknod,
     Chown,
@@ -70,7 +102,10 @@ pub enum ArgName {
     Groups,
     Capability,
     IoPriority,
+    MemPolicy,
     UMount2,
+    MoveMount,
+    Fsopen,
 }
 
 impl ArgName {
@@ -79,6 +114,7 @@ impl ArgName {
             ArgName::Namespace,
             ArgName::Unshare,
             ArgName::Mount,
+            ArgName::MountFromFd,
             ArgName::Symlink,
             ArgName::Mknod,
             ArgName::Chown,
@@ -87,6 +123,8 @@ impl ArgName {
             ArgName::Groups,
             ArgName::Capability,
             ArgName::IoPriority,
+            ArgName::MemPolicy,
+            ArgName::MoveMount,
         ]
         .iter()
         .copied()
@@ -129,18 +167,37 @@ impl MockCalls {
         Ok(())
     }
 
-    fn fetch(&self, name: ArgName) -> Ref<Mock> {
+    fn fetch(&self, name: ArgName) -> Ref<'_, Mock> {
         self.args.get(&name).unwrap().borrow()
     }
 
-    fn fetch_mut(&self, name: ArgName) -> RefMut<Mock> {
+    fn fetch_mut(&self, name: ArgName) -> RefMut<'_, Mock> {
         self.args.get(&name).unwrap().borrow_mut()
     }
 }
 
 #[derive(Default)]
 pub struct TestHelperSyscall {
+    mock_id: RefCell<MockId>,
     mocks: MockCalls,
+}
+
+pub struct MockId {
+    uid: Uid,
+    gid: Gid,
+    euid: Uid,
+    egid: Gid,
+}
+
+impl Default for MockId {
+    fn default() -> Self {
+        Self {
+            uid: nix::unistd::getuid(),
+            gid: nix::unistd::getgid(),
+            euid: nix::unistd::geteuid(),
+            egid: nix::unistd::getegid(),
+        }
+    }
 }
 
 impl Syscall for TestHelperSyscall {
@@ -158,7 +215,11 @@ impl Syscall for TestHelperSyscall {
     }
 
     fn set_id(&self, _uid: Uid, _gid: Gid) -> Result<()> {
-        unimplemented!()
+        self.mock_id.borrow_mut().uid = _uid;
+        self.mock_id.borrow_mut().gid = _gid;
+        self.mock_id.borrow_mut().euid = _uid;
+        self.mock_id.borrow_mut().egid = _gid;
+        Ok(())
     }
 
     fn unshare(&self, flags: CloneFlags) -> Result<()> {
@@ -200,16 +261,74 @@ impl Syscall for TestHelperSyscall {
         flags: MsFlags,
         data: Option<&str>,
     ) -> Result<()> {
+        // For tests: resolve /proc/self/fd/<n> to the real path before recording.
+        let target_owned = if target.starts_with(Path::new("/proc/self/fd")) {
+            std::fs::read_link(target).unwrap_or_else(|_| target.to_owned())
+        } else {
+            target.to_owned()
+        };
+
         self.mocks.act(
             ArgName::Mount,
             Box::new(MountArgs {
                 source: source.map(|x| x.to_owned()),
-                target: target.to_owned(),
+                target: target_owned,
                 fstype: fstype.map(|x| x.to_owned()),
                 flags,
                 data: data.map(|x| x.to_owned()),
             }),
         )
+    }
+
+    fn mount_from_fd(&self, source_fd: &OwnedFd, target: &Path) -> Result<()> {
+        self.mocks.act(
+            ArgName::MountFromFd,
+            Box::new(MountFromFdArgs {
+                fd: source_fd.as_raw_fd(),
+                target: target.to_owned(),
+            }),
+        )
+    }
+
+    fn move_mount(
+        &self,
+        from_dirfd: BorrowedFd<'_>,
+        from_path: Option<&str>,
+        to_dirfd: BorrowedFd<'_>,
+        to_path: Option<&str>,
+        flags: u32,
+    ) -> Result<()> {
+        let rec = MoveMountArgs {
+            from_dirfd: from_dirfd.as_raw_fd(),
+            from_path: from_path.map(OsString::from),
+            to_dirfd: to_dirfd.as_raw_fd(),
+            to_path: to_path.map(OsString::from),
+            flags,
+        };
+        self.mocks.act(ArgName::MoveMount, Box::new(rec))
+    }
+
+    fn fsopen(&self, _: Option<&str>, _: u32) -> Result<OwnedFd> {
+        todo!()
+    }
+
+    fn fsconfig(
+        &self,
+        _: BorrowedFd<'_>,
+        _: u32,
+        _: Option<&str>,
+        _: Option<&str>,
+        _: libc::c_int,
+    ) -> Result<()> {
+        todo!()
+    }
+
+    fn fsmount(&self, _: BorrowedFd<'_>, _: u32, _: Option<u64>) -> Result<OwnedFd> {
+        todo!()
+    }
+
+    fn open_tree(&self, _: RawFd, _: Option<&str>, _: u32) -> Result<OwnedFd> {
+        todo!()
     }
 
     fn symlink(&self, original: &Path, link: &Path) -> Result<()> {
@@ -251,7 +370,7 @@ impl Syscall for TestHelperSyscall {
 
     fn mount_setattr(
         &self,
-        _: i32,
+        _: BorrowedFd<'_>,
         _: &Path,
         _: u32,
         _: &linux::MountAttr,
@@ -267,6 +386,17 @@ impl Syscall for TestHelperSyscall {
         )
     }
 
+    fn set_mempolicy(&self, mode: i32, nodemask: &[libc::c_ulong], maxnode: u64) -> Result<()> {
+        self.mocks.act(
+            ArgName::MemPolicy,
+            Box::new(MemPolicyArgs {
+                mode,
+                nodemask: nodemask.to_vec(),
+                maxnode,
+            }),
+        )
+    }
+
     fn umount2(&self, target: &Path, flags: MntFlags) -> Result<()> {
         self.mocks.act(
             ArgName::UMount2,
@@ -275,6 +405,26 @@ impl Syscall for TestHelperSyscall {
                 flags,
             }),
         )
+    }
+
+    fn get_uid(&self) -> Uid {
+        self.mock_id.borrow().uid
+    }
+
+    fn get_gid(&self) -> Gid {
+        self.mock_id.borrow().gid
+    }
+
+    fn get_euid(&self) -> Uid {
+        self.mock_id.borrow().euid
+    }
+
+    fn get_egid(&self) -> Gid {
+        self.mock_id.borrow().egid
+    }
+
+    fn personality(&self, _: PersonalityDomain) -> Result<()> {
+        todo!()
     }
 }
 
@@ -322,6 +472,15 @@ impl TestHelperSyscall {
             .iter()
             .map(|x| x.downcast_ref::<MountArgs>().unwrap().clone())
             .collect::<Vec<MountArgs>>()
+    }
+
+    pub fn get_mount_from_fd_args(&self) -> Vec<MountFromFdArgs> {
+        self.mocks
+            .fetch(ArgName::MountFromFd)
+            .values
+            .iter()
+            .map(|x| x.downcast_ref::<MountFromFdArgs>().unwrap().clone())
+            .collect::<Vec<MountFromFdArgs>>()
     }
 
     pub fn get_symlink_args(&self) -> Vec<(PathBuf, PathBuf)> {
@@ -385,6 +544,15 @@ impl TestHelperSyscall {
             .iter()
             .map(|x| x.downcast_ref::<IoPriorityArgs>().unwrap().clone())
             .collect::<Vec<IoPriorityArgs>>()
+    }
+
+    pub fn get_mempolicy_args(&self) -> Vec<MemPolicyArgs> {
+        self.mocks
+            .fetch(ArgName::MemPolicy)
+            .values
+            .iter()
+            .map(|x| x.downcast_ref::<MemPolicyArgs>().unwrap().clone())
+            .collect::<Vec<MemPolicyArgs>>()
     }
 
     pub fn get_umount_args(&self) -> Vec<UMount2Args> {

@@ -19,7 +19,7 @@ As the steps to run these tests can be a bit tedious, a makefile in project the 
 
 - test: The unit tests
 - oci-integration-test: The integration tests provided by OCI, these are the current standard to make sure youki is OCI compliant.
-- integration-test: This is the Rust port of the OCI runtime tests, as there are some issues in the OCI tests. See [integration_test](./integration_test.md) page.
+- integration-test: This is the Rust port of the OCI runtime tests, as there are some issues in the OCI tests. See [integration_test](./e2e/integration_test.md) page.
 
 All three can be run by using `make test-all`, or you can run the individual command to run specific tests.
 
@@ -27,7 +27,7 @@ All three can be run by using `make test-all`, or you can run the individual com
 
 #### OCI
 
-Open containers initiative is project, which provides a standardization and standardized specification for operating-system-level virtualization. That way components that confirm to the specification provided by OCI spec, can interoperate with each other easily, and developing of new applications becomes easier. For example youki can be used inplace of runc in Docker, as all three : Docker, runc and youki are OCI compliant, and have a standard interface.
+Open containers initiative is project, which provides a standardization and standardized specification for operating-system-level virtualization. That way components that confirm to the specification provided by OCI spec, can interoperate with each other easily, and developing of new applications becomes easier. For example youki can be used in place of runc in Docker, as all three : Docker, runc and youki are OCI compliant, and have a standard interface.
 
 Their main GitHub page is at [https://github.com/opencontainers](https://github.com/opencontainers), and more information about the runtime specifications can be found at [https://github.com/opencontainers/runtime-spec/blob/master/runtime.md](https://github.com/opencontainers/runtime-spec/blob/master/runtime.md).
 

@@ -1,12 +1,14 @@
 use std::collections::HashMap;
 use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
 use nix::unistd::Pid;
 use oci_spec::runtime::LinuxIntelRdt;
-use once_cell::sync::Lazy;
-use procfs::process::Process;
+use pathrs::flags::OpenFlags;
+use pathrs::procfs::{ProcfsBase, ProcfsHandle};
+use procfs::process::MountInfo;
 use regex::Regex;
 
 #[derive(Debug, thiserror::Error)]
@@ -45,6 +47,10 @@ pub enum IntelRdtError {
     CreateClosIDDirectory(#[source] std::io::Error),
     #[error("failed to canonicalize path")]
     Canonicalize(#[source] std::io::Error),
+    #[error(transparent)]
+    Pathrs(#[from] pathrs::error::Error),
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -90,16 +96,21 @@ pub fn delete_resctrl_subdirectory(id: &str) -> Result<()> {
 
 /// Finds the resctrl mount path by looking at the process mountinfo data.
 pub fn find_resctrl_mount_point() -> Result<PathBuf> {
-    let process = Process::myself()?;
-    let mount_infos = process.mountinfo()?;
+    let reader = BufReader::new(ProcfsHandle::new()?.open(
+        ProcfsBase::ProcSelf,
+        "mountinfo",
+        OpenFlags::O_RDONLY | OpenFlags::O_CLOEXEC,
+    )?);
 
-    for mount_info in mount_infos.0.iter() {
-        // "resctrl" type fs can be mounted only once.
-        if mount_info.fs_type == "resctrl" {
-            let path = mount_info.mount_point.clone().canonicalize().map_err(|err| {
-                tracing::error!(path = ?mount_info.mount_point, "failed to canonicalize path: {}", err);
-                IntelRdtError::Canonicalize(err)
-            })?;
+    for lr in reader.lines() {
+        let s = lr.map_err(IntelRdtError::from)?;
+        let mi = MountInfo::from_line(&s).map_err(IntelRdtError::from)?;
+
+        if mi.fs_type == "resctrl" {
+            let path = mi
+                .mount_point
+                .canonicalize()
+                .map_err(IntelRdtError::Canonicalize)?;
             return Ok(path);
         }
     }
@@ -160,7 +171,7 @@ fn combine_l3_cache_and_mem_bw_schemas(
     mem_bw_schema: &Option<String>,
 ) -> Option<String> {
     match (l3_cache_schema, mem_bw_schema) {
-        (Some(ref real_l3_cache_schema), Some(ref real_mem_bw_schema)) => {
+        (Some(real_l3_cache_schema), Some(real_mem_bw_schema)) => {
             // Combine the results. Filter out "MB:"-lines from l3_cache_schema
             let mut output: Vec<&str> = vec![];
 
@@ -201,11 +212,12 @@ struct ParsedLine {
 fn parse_mb_line(line: &str) -> std::result::Result<HashMap<String, String>, ParseLineError> {
     let mut token_map = HashMap::new();
 
-    static MB_VALIDATE_RE: Lazy<Regex> = Lazy::new(|| {
+    static MB_VALIDATE_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"^MB:(?:\s|;)*(?:\w+\s*=\s*\w+)?(?:(?:\s*;+\s*)+\w+\s*=\s*\w+)*(?:\s|;)*$")
             .unwrap()
     });
-    static MB_CAPTURE_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"(\w+)\s*=\s*(\w+)").unwrap());
+    static MB_CAPTURE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(\w+)\s*=\s*(\w+)").unwrap());
 
     if !MB_VALIDATE_RE.is_match(line) {
         return Err(ParseLineError::MBLine);
@@ -227,11 +239,11 @@ fn parse_mb_line(line: &str) -> std::result::Result<HashMap<String, String>, Par
 fn parse_l3_line(line: &str) -> std::result::Result<HashMap<String, String>, ParseLineError> {
     let mut token_map = HashMap::new();
 
-    static L3_VALIDATE_RE: Lazy<Regex> = Lazy::new(|| {
+    static L3_VALIDATE_RE: LazyLock<Regex> = LazyLock::new(|| {
         Regex::new(r"^(?:L3|L3DATA|L3CODE):(?:\s|;)*(?:\w+\s*=\s*[[:xdigit:]]+)?(?:(?:\s*;+\s*)+\w+\s*=\s*[[:xdigit:]]+)*(?:\s|;)*$").unwrap()
     });
-    static L3_CAPTURE_RE: Lazy<Regex> =
-        Lazy::new(|| Regex::new(r"(\w+)\s*=\s*0*([[:xdigit:]]+)").unwrap());
+    static L3_CAPTURE_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"(\w+)\s*=\s*0*([[:xdigit:]]+)").unwrap());
     //                                        ^
     //                          +-------------+
     //                          |
@@ -368,9 +380,8 @@ pub fn setup_intel_rdt(
     intel_rdt: &LinuxIntelRdt,
 ) -> Result<bool> {
     // Find mounted resctrl filesystem, error out if it can't be found.
-    let path = find_resctrl_mount_point().map_err(|err| {
+    let path = find_resctrl_mount_point().inspect_err(|_err| {
         tracing::error!("failed to find a mounted resctrl file system");
-        err
     })?;
     let clos_id_set = intel_rdt.clos_id().is_some();
     let only_clos_id_set =
@@ -382,9 +393,8 @@ pub fn setup_intel_rdt(
     };
 
     let created_dir = write_container_pid_to_resctrl_tasks(&path, id, *init_pid, only_clos_id_set)
-        .map_err(|err| {
+        .inspect_err(|_err| {
             tracing::error!("failed to write container pid to resctrl tasks file");
-            err
         })?;
     write_resctrl_schemata(
         &path,
@@ -394,9 +404,8 @@ pub fn setup_intel_rdt(
         clos_id_set,
         created_dir,
     )
-    .map_err(|err| {
+    .inspect_err(|_err| {
         tracing::error!("failed to write schemata to resctrl schemata file");
-        err
     })?;
 
     // If closID is not set and the runtime has created the sub-directory,

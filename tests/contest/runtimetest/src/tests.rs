@@ -1,21 +1,32 @@
 use std::env;
 use std::ffi::OsStr;
-use std::fs::{self, read_dir};
+use std::fs::{self, File, read_dir};
+use std::io::{self, BufRead};
 use std::os::linux::fs::MetadataExt;
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::path::Path;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
+use netlink_packet_core::{NLM_F_DUMP, NLM_F_REQUEST, NetlinkMessage, NetlinkPayload};
+use netlink_packet_route::RouteNetlinkMessage;
+use netlink_packet_route::address::AddressMessage;
+use netlink_packet_route::link::{LinkAttribute, LinkMessage};
+use netlink_sys::Socket;
+use netlink_sys::protocols::NETLINK_ROUTE;
 use nix::errno::Errno;
 use nix::libc;
-use nix::sys::resource::{getrlimit, Resource};
-use nix::sys::stat::{umask, Mode};
+use nix::mount::{MsFlags, mount};
+use nix::sys::resource::{Resource, getrlimit};
+use nix::sys::stat::{Mode, umask};
 use nix::sys::utsname;
-use nix::unistd::{getcwd, getgid, getgroups, getuid, Gid, Uid};
+use nix::unistd::{Gid, Uid, getcwd, getgid, getgroups, getuid};
 use oci_spec::runtime::IOPriorityClass::{self, IoprioClassBe, IoprioClassIdle, IoprioClassRt};
+use oci_spec::runtime::MemoryPolicyFlagType::*;
 use oci_spec::runtime::{
-    LinuxDevice, LinuxDeviceType, LinuxSchedulerPolicy, PosixRlimit, PosixRlimitType, Spec,
+    LinuxDevice, LinuxDeviceType, LinuxIdMapping, LinuxSchedulerPolicy, MemoryPolicyModeType,
+    PosixRlimit, PosixRlimitType, Spec,
 };
+use tempfile::Builder;
 
 use crate::utils::{
     self, test_dir_read_access, test_dir_write_access, test_read_access, test_write_access,
@@ -136,6 +147,8 @@ pub fn validate_mounts_recursive(spec: &Spec) {
     if let Some(mounts) = spec.mounts() {
         for mount in mounts {
             if let Some(options) = mount.options() {
+                let subdir_path = mount.destination().join("mount_subdir");
+                let null_device_path = subdir_path.join("null");
                 for option in options {
                     match option.as_str() {
                         "rro" => {
@@ -171,7 +184,7 @@ pub fn validate_mounts_recursive(spec: &Spec) {
                                     Ok(())
                                 })
                             {
-                                eprintln!("error in testing rro recursive mounting : {e}");
+                                eprintln!("error in testing rrw recursive mounting : {e}");
                             }
                         }
                         "rnoexec" => {
@@ -181,7 +194,10 @@ pub fn validate_mounts_recursive(spec: &Spec) {
                                     if utils::test_file_executable(test_file_path.to_str().unwrap())
                                         .is_ok()
                                     {
-                                        bail!("path {:?} expected to be not executable, found executable", test_file_path);
+                                        bail!(
+                                            "path {:?} expected to be not executable, found executable",
+                                            test_file_path
+                                        );
                                     }
                                     Ok(())
                                 },
@@ -196,7 +212,10 @@ pub fn validate_mounts_recursive(spec: &Spec) {
                                     if let Err(ee) = utils::test_file_executable(
                                         test_file_path.to_str().unwrap(),
                                     ) {
-                                        bail!("path {:?} expected to be executable, found not executable, error: {ee}", test_file_path);
+                                        bail!(
+                                            "path {:?} expected to be executable, found not executable, error: {ee}",
+                                            test_file_path
+                                        );
                                     }
                                     Ok(())
                                 },
@@ -205,93 +224,87 @@ pub fn validate_mounts_recursive(spec: &Spec) {
                             }
                         }
                         "rdiratime" => {
-                            println!("test_dir_update_access_time: {mount:?}");
-                            let rest = utils::test_dir_update_access_time(
-                                mount.destination().to_str().unwrap(),
-                            );
+                            let rest =
+                                utils::test_dir_update_access_time(subdir_path.to_str().unwrap());
                             if let Err(e) = rest {
                                 eprintln!("error in testing rdiratime recursive mounting: {e}");
                             }
                         }
                         "rnodiratime" => {
-                            println!("test_dir_not_update_access_time: {mount:?}");
                             let rest = utils::test_dir_not_update_access_time(
-                                mount.destination().to_str().unwrap(),
+                                subdir_path.to_str().unwrap(),
                             );
                             if let Err(e) = rest {
                                 eprintln!("error in testing rnodiratime recursive mounting: {e}");
                             }
                         }
                         "rdev" => {
-                            println!("test_device_access: {mount:?}");
                             let rest =
-                                utils::test_device_access(mount.destination().to_str().unwrap());
+                                utils::test_device_access(null_device_path.to_str().unwrap());
                             if let Err(e) = rest {
                                 eprintln!("error in testing rdev recursive mounting: {e}");
                             }
                         }
                         "rnodev" => {
-                            println!("test_device_unaccess: {mount:?}");
                             let rest =
-                                utils::test_device_unaccess(mount.destination().to_str().unwrap());
+                                utils::test_device_access(null_device_path.to_str().unwrap());
                             if rest.is_ok() {
-                                // because /rnodev/null device not access,so rest is err
+                                // because /mnt/mount_subdir/null device not access,so rest is err
                                 eprintln!("error in testing rnodev recursive mounting");
                             }
                         }
                         "rrelatime" => {
-                            println!("rrelatime: {mount:?}");
-                            if let Err(e) = utils::test_mount_releatime_option(
-                                mount.destination().to_str().unwrap(),
-                            ) {
-                                eprintln!("path expected to be rrelatime, found not rrelatime, error: {e}");
+                            if let Err(e) =
+                                utils::test_mount_releatime_option(subdir_path.to_str().unwrap())
+                            {
+                                eprintln!(
+                                    "path expected to be rrelatime, found not rrelatime, error: {e}"
+                                );
                             }
                         }
                         "rnorelatime" => {
-                            println!("rnorelatime: {mount:?}");
-                            if let Err(e) = utils::test_mount_noreleatime_option(
-                                mount.destination().to_str().unwrap(),
-                            ) {
-                                eprintln!("path expected to be rnorelatime, found not rnorelatime, error: {e}");
+                            if let Err(e) =
+                                utils::test_mount_norelatime_option(subdir_path.to_str().unwrap())
+                            {
+                                eprintln!(
+                                    "path expected to be rnorelatime, found not rnorelatime, error: {e}"
+                                );
                             }
                         }
                         "rnoatime" => {
-                            println!("rnoatime: {mount:?}");
-                            if let Err(e) = utils::test_mount_rnoatime_option(
-                                mount.destination().to_str().unwrap(),
-                            ) {
+                            if let Err(e) =
+                                utils::test_mount_rnoatime_option(subdir_path.to_str().unwrap())
+                            {
                                 eprintln!(
                                     "path expected to be rnoatime, found not rnoatime, error: {e}"
                                 );
                             }
                         }
                         "rstrictatime" => {
-                            println!("rstrictatime: {mount:?}");
-                            if let Err(e) = utils::test_mount_rstrictatime_option(
-                                mount.destination().to_str().unwrap(),
-                            ) {
-                                eprintln!("path expected to be rstrictatime, found not rstrictatime, error: {e}");
+                            if let Err(e) =
+                                utils::test_mount_rstrictatime_option(subdir_path.to_str().unwrap())
+                            {
+                                eprintln!(
+                                    "path expected to be rstrictatime, found not rstrictatime, error: {e}"
+                                );
                             }
                         }
                         "rnosymfollow" => {
-                            if let Err(e) = utils::test_mount_rnosymfollow_option(
-                                mount.destination().to_str().unwrap(),
-                            ) {
-                                eprintln!("path expected to be rnosymfollow, found not rnosymfollow, error: {e}");
+                            if let Err(e) =
+                                utils::test_mount_rnosymfollow_option(subdir_path.to_str().unwrap())
+                            {
+                                eprintln!(
+                                    "path expected to be rnosymfollow, found not rnosymfollow, error: {e}"
+                                );
                             }
                         }
                         "rsymfollow" => {
-                            if let Err(e) = utils::test_mount_rsymfollow_option(
-                                mount.destination().to_str().unwrap(),
-                            ) {
-                                eprintln!("path expected to be rsymfollow, found not rsymfollow, error: {e}");
-                            }
-                        }
-                        "rsuid" => {
-                            if let Err(e) = utils::test_mount_rsuid_option(
-                                mount.destination().to_str().unwrap(),
-                            ) {
-                                eprintln!("path expected to be rsuid, found not rsuid, error: {e}");
+                            if let Err(e) =
+                                utils::test_mount_rsymfollow_option(subdir_path.to_str().unwrap())
+                            {
+                                eprintln!(
+                                    "path expected to be rsymfollow, found not rsymfollow, error: {e}"
+                                );
                             }
                         }
                         _ => {}
@@ -299,6 +312,26 @@ pub fn validate_mounts_recursive(spec: &Spec) {
                 }
             }
         }
+    }
+}
+
+pub fn validate_mounts_recursive_rbind_ro() {
+    let path = Path::new("/mnt").join("bar");
+    if matches!(test_write_access(path.to_str().unwrap()), Ok(())) {
+        eprintln!(
+            "in readonly paths, path expected to not be writable, found writable: {}",
+            path.display()
+        );
+        return;
+    }
+
+    let sub_path = Path::new("/mnt/mount_subdir").join("bar");
+    if let Err(e) = test_write_access(sub_path.to_str().unwrap()) {
+        eprintln!(
+            "subpath expected to be writable, found read-only: {} err: {}",
+            sub_path.display(),
+            e
+        );
     }
 }
 
@@ -346,7 +379,6 @@ pub fn validate_sysctl(spec: &Spec) {
 pub fn validate_scheduler_policy(spec: &Spec) {
     let proc = spec.process().as_ref().unwrap();
     let sc = proc.scheduler().as_ref().unwrap();
-    println!("schedule is {:?}", spec);
     let mut get_sched_attr = nc::sched_attr_t {
         size: 0,
         sched_policy: 0,
@@ -361,15 +393,12 @@ pub fn validate_scheduler_policy(spec: &Spec) {
     };
     unsafe {
         match nc::sched_getattr(0, &mut get_sched_attr, 0) {
-            Ok(_) => {
-                println!("sched_getattr get success");
-            }
+            Ok(_) => {}
             Err(e) => {
                 return eprintln!("error due to fail to get sched attr error: {e}");
             }
         };
     }
-    println!("get_sched_attr is {:?}", get_sched_attr);
     let sp = get_sched_attr.sched_policy;
     let want_sp: u32 = match *sc.policy() {
         LinuxSchedulerPolicy::SchedOther => 0,
@@ -380,7 +409,6 @@ pub fn validate_scheduler_policy(spec: &Spec) {
         LinuxSchedulerPolicy::SchedIdle => 5,
         LinuxSchedulerPolicy::SchedDeadline => 6,
     };
-    println!("want_sp {:?}", want_sp);
     if sp != want_sp {
         return eprintln!("error due to sched_policy want {want_sp}, got {sp}");
     }
@@ -467,38 +495,36 @@ fn validate_device(device: &LinuxDevice, description: &str) {
         }
     }
 
-    let expected_permissions = device.file_mode();
-    if let Some(expected) = expected_permissions {
-        let actual_permissions = file_data.permissions().mode() & 0o777;
-        if actual_permissions != expected {
-            eprintln!(
-                "error due to device file mode want {expected:?}, got {actual_permissions:?}"
-            );
-        }
+    let expected_permissions = device.file_mode().unwrap_or(0o666);
+    let actual_permissions = file_data.permissions().mode() & 0o777;
+    if actual_permissions != expected_permissions {
+        eprintln!(
+            "error due to device file mode want {expected_permissions:?}, got {actual_permissions:?}"
+        );
     }
 
     if description == "/dev/console (default device)" {
         eprintln!("we need the major/minor from the controlling TTY");
     }
 
-    if let Some(expected_uid) = device.uid() {
-        if file_data.st_uid() != expected_uid {
-            eprintln!(
-                "error due to device uid want {}, got {}",
-                expected_uid,
-                file_data.st_uid()
-            );
-        }
+    if let Some(expected_uid) = device.uid()
+        && file_data.st_uid() != expected_uid
+    {
+        eprintln!(
+            "error due to device uid want {}, got {}",
+            expected_uid,
+            file_data.st_uid()
+        );
     }
 
-    if let Some(expected_gid) = device.gid() {
-        if file_data.st_gid() != expected_gid {
-            eprintln!(
-                "error due to device gid want {}, got {}",
-                expected_gid,
-                file_data.st_gid()
-            );
-        }
+    if let Some(expected_gid) = device.gid()
+        && file_data.st_gid() != expected_gid
+    {
+        eprintln!(
+            "error due to device gid want {}, got {}",
+            expected_gid,
+            file_data.st_gid()
+        );
     }
 }
 
@@ -551,6 +577,269 @@ pub fn test_io_priority_class(spec: &Spec, io_priority_class: IOPriorityClass) {
     };
     if priority != expected_priority {
         eprintln!("error ioprio_get expected priority {expected_priority:?}, got {priority}")
+    }
+}
+
+fn parse_node_string(nodes: &str) -> Vec<u32> {
+    let mut out = Vec::new();
+    let s = nodes.trim();
+    if s.is_empty() {
+        return out;
+    }
+    for part in s.split(',') {
+        let p = part.trim();
+        if p.is_empty() {
+            continue;
+        }
+        if let Some(dash) = p.find('-') {
+            let start = p[..dash].trim().parse::<u32>();
+            let end = p[dash + 1..].trim().parse::<u32>();
+            match (start, end) {
+                (Ok(a), Ok(b)) if a <= b => {
+                    for n in a..=b {
+                        out.push(n);
+                    }
+                }
+                _ => {
+                    // invalid token, ignore
+                }
+            }
+        } else if let Ok(n) = p.parse::<u32>() {
+            out.push(n);
+        }
+    }
+    out
+}
+
+fn mems_allowed_list() -> Option<Vec<u32>> {
+    let s = std::fs::read_to_string("/proc/self/status").ok()?;
+    let line = s.lines().find(|l| l.starts_with("Mems_allowed_list:"))?;
+    let list = line.split_once(':')?.1.trim();
+    let mut nodes = parse_node_string(list);
+    nodes.sort_unstable();
+    nodes.dedup();
+    Some(nodes)
+}
+
+struct ExpectedNodeSets {
+    physical_from_spec: Vec<u32>,
+    effective_allowed: Vec<u32>,
+}
+
+fn expected_node_sets(spec: &Spec) -> Option<ExpectedNodeSets> {
+    let linux = spec.linux().as_ref()?;
+    let mp = linux.memory_policy().as_ref()?;
+    let nodes_spec = mp.nodes().as_deref().unwrap_or("").trim();
+    let nodes = parse_node_string(nodes_spec);
+
+    let mut relative = false;
+    let mut _static = false;
+    if let Some(flags) = mp.flags() {
+        for f in flags {
+            match f {
+                MpolFRelativeNodes => relative = true,
+                MpolFStaticNodes => _static = true,
+                _ => {}
+            }
+        }
+    }
+
+    let mems = mems_allowed_list().unwrap_or_default();
+
+    let physical_from_spec: Vec<u32> = if relative {
+        nodes
+            .into_iter()
+            .filter_map(|i| mems.get(i as usize).copied())
+            .collect()
+    } else {
+        nodes
+    };
+
+    let mut effective: Vec<u32> = physical_from_spec
+        .iter()
+        .copied()
+        .filter(|n| mems.contains(n))
+        .collect();
+
+    effective.sort_unstable();
+    effective.dedup();
+
+    Some(ExpectedNodeSets {
+        physical_from_spec,
+        effective_allowed: effective,
+    })
+}
+
+fn nodes_in_numa_maps_policy(policy_field: &str) -> Vec<u32> {
+    if let Some((_, nodes_spec)) = policy_field.rsplit_once(':') {
+        let mut v = parse_node_string(nodes_spec);
+        v.sort_unstable();
+        v.dedup();
+        return v;
+    }
+    Vec::new()
+}
+
+pub fn validate_memory_policy(spec: &Spec) {
+    let linux = spec.linux().as_ref().unwrap();
+    let memory_policy = linux.memory_policy();
+    let expected_mode = memory_policy.as_ref().map(|p| p.mode());
+
+    let numa_maps_content = match fs::read_to_string("/proc/self/numa_maps") {
+        Ok(content) => content,
+        Err(e) => {
+            eprintln!("failed to read /proc/self/numa_maps: {}", e);
+            return;
+        }
+    };
+
+    let policy_entries: Vec<(&str, &str)> = numa_maps_content
+        .lines()
+        .filter_map(|line| {
+            if line.trim().is_empty() {
+                return None;
+            }
+            let mut parts = line.split_whitespace();
+            parts.next()?;
+            let policy_field = parts.next()?;
+            Some((policy_field, line))
+        })
+        .collect();
+
+    if policy_entries.is_empty() {
+        eprintln!("no parsable entries found in /proc/self/numa_maps");
+        return;
+    }
+
+    let fallback_entry = policy_entries[0];
+    let default_policy_field = fallback_entry.0;
+    let find_with_substring = |needle: &str| -> (&str, &str) {
+        policy_entries
+            .iter()
+            .copied()
+            .find(|(policy, _)| policy.contains(needle))
+            .unwrap_or(fallback_entry)
+    };
+
+    let (nodes_is_empty, has_static_flag, has_relative_flag) = if let Some(p) = memory_policy {
+        let nodes_is_empty = p.nodes().as_ref().is_none_or(|n| n.trim().is_empty());
+        let mut has_static = false;
+        let mut has_relative = false;
+        if let Some(flags) = p.flags() {
+            for f in flags {
+                match f {
+                    MpolFStaticNodes => has_static = true,
+                    MpolFRelativeNodes => has_relative = true,
+                    _ => {}
+                }
+            }
+        }
+        (nodes_is_empty, has_static, has_relative)
+    } else {
+        (true, false, false)
+    };
+
+    match expected_mode {
+        Some(MemoryPolicyModeType::MpolDefault) => {
+            let (policy_field, _) = find_with_substring("default");
+            if !policy_field.contains("default") {
+                eprintln!("expected default policy, but found: {}", policy_field);
+            }
+        }
+        Some(MemoryPolicyModeType::MpolInterleave) => {
+            let (policy_field, full_line) = find_with_substring("interleave");
+            if !policy_field.contains("interleave") {
+                eprintln!("expected interleave policy, but found: {}", policy_field);
+            }
+            if let Some(expect) = expected_node_sets(spec) {
+                let got_nodes = nodes_in_numa_maps_policy(policy_field);
+                if got_nodes != expect.effective_allowed {
+                    eprintln!(
+                        "expected interleave nodes {:?}, got {:?} (line: {})",
+                        expect.effective_allowed, got_nodes, full_line
+                    );
+                }
+            }
+        }
+        Some(MemoryPolicyModeType::MpolBind) => {
+            let (policy_field, full_line) = find_with_substring("bind");
+            if !policy_field.contains("bind") {
+                eprintln!("expected bind policy, but found: {}", policy_field);
+            }
+            if has_static_flag && !policy_field.contains("static") {
+                eprintln!("expected bind static, but found: {}", policy_field);
+            }
+            if let Some(expect) = expected_node_sets(spec) {
+                let got_nodes = nodes_in_numa_maps_policy(policy_field);
+                if got_nodes != expect.effective_allowed {
+                    eprintln!(
+                        "expected bind nodes {:?}, got {:?} (line: {})",
+                        expect.effective_allowed, got_nodes, full_line
+                    );
+                }
+            }
+        }
+        Some(MemoryPolicyModeType::MpolPreferred) => {
+            if nodes_is_empty {
+                let (policy_field, _) = find_with_substring("local");
+                if !policy_field.contains("local") {
+                    eprintln!(
+                        "expected preferred(empty)->local, but found: {}",
+                        policy_field
+                    );
+                }
+            } else {
+                let (policy_field, full_line) = find_with_substring("prefer");
+                if let Some(expect) = expected_node_sets(spec) {
+                    let prefer = expect.physical_from_spec.first().copied();
+                    let mems = mems_allowed_list().unwrap_or_default();
+                    if let Some(prefer_node) = prefer {
+                        if mems.contains(&prefer_node) {
+                            let got_nodes = nodes_in_numa_maps_policy(policy_field);
+                            if !(policy_field.contains("prefer") && got_nodes == vec![prefer_node])
+                            {
+                                eprintln!(
+                                    "expected prefer {} within mems_allowed, got {} (line: {})",
+                                    prefer_node, policy_field, full_line
+                                );
+                            }
+                        } else if !policy_field.contains("local") {
+                            eprintln!(
+                                "expected local fallback (preferred disallowed), got {} (line: {})",
+                                policy_field, full_line
+                            );
+                        }
+                    }
+                } else if !policy_field.contains("prefer") {
+                    eprintln!("expected preferred policy, but found: {}", policy_field);
+                }
+                if has_relative_flag && !policy_field.contains("relative") {
+                    eprintln!("expected preferred relative, but found: {}", policy_field);
+                }
+            }
+        }
+        Some(MemoryPolicyModeType::MpolLocal) => {
+            let (policy_field, _) = find_with_substring("local");
+            if !policy_field.contains("local") {
+                eprintln!("expected local policy, but found: {}", policy_field);
+            }
+        }
+        Some(_) => {
+            println!(
+                "memory policy {} applied (non-strict check)",
+                default_policy_field
+            );
+        }
+        None => {
+            if !policy_entries.iter().any(|(policy_field, _)| {
+                policy_field.contains("default") || policy_field.contains("local")
+            }) {
+                eprintln!(
+                    "expected default/local with no expected policy, got: {}",
+                    default_policy_field
+                );
+            }
+        }
     }
 }
 
@@ -800,14 +1089,12 @@ pub fn validate_fd_control(_spec: &Spec) {
     let mut fd_details = vec![];
     let mut found_dirfd = false;
     for (path, linkpath) in &entries {
-        println!("found fd in container {} {:?}", path.display(), linkpath);
         // The difference between metadata.unwrap() and fs::metadata is that the latter
         // will now try to follow the symlink
         match fs::metadata(path) {
             Ok(m) => fd_details.push((path, linkpath, m)),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound && !found_dirfd => {
                 // Expected for the dirfd
-                println!("(ignoring dirfd)");
                 found_dirfd = true
             }
             Err(e) => {
@@ -818,5 +1105,271 @@ pub fn validate_fd_control(_spec: &Spec) {
 
     if fd_details.len() != expected_num_fds {
         eprintln!("mismatched fds inside container! {:?}", fd_details);
+    }
+}
+
+pub fn validate_masked_paths(spec: &Spec) {
+    let linux = spec.linux().as_ref().unwrap();
+    let masked_paths = match linux.masked_paths() {
+        Some(p) => p,
+        None => {
+            eprintln!("in masked paths, expected some masked paths to be set, found none");
+            return;
+        }
+    };
+
+    for path in masked_paths.iter().map(Path::new) {
+        if !path.is_absolute() {
+            eprintln!("in masked paths, the path must be absolute.")
+        }
+        match test_read_access(path) {
+            Ok(true) => {
+                eprintln!(
+                    "in masked paths, expected path {:?} to be masked, but was found readable",
+                    path.iter().as_path(),
+                );
+                return;
+            }
+            Ok(false) => { /* This is expected */ }
+            Err(e) => {
+                let errno = Errno::from_raw(e.raw_os_error().unwrap());
+                if errno == Errno::ENOENT {
+                    /* This is expected */
+                } else {
+                    eprintln!(
+                        "in masked paths, error in testing read access for path {:?} : {errno:?}",
+                        path.iter().as_path(),
+                    );
+                    return;
+                }
+            }
+        }
+    }
+}
+
+pub fn validate_rootfs_propagation(spec: &Spec) {
+    let linux = spec.linux().as_ref().unwrap();
+    let propagation = linux.rootfs_propagation().as_ref().unwrap();
+
+    let target_dir = Builder::new()
+        .prefix("target")
+        .tempdir()
+        .expect("create target directory");
+    let target_path = target_dir.path();
+
+    match propagation.as_str() {
+        "shared" | "slave" | "private" => {
+            if let Err(e) = mount(
+                Some("/"),
+                target_dir.path(),
+                None::<&str>,
+                MsFlags::MS_BIND | MsFlags::MS_REC,
+                None::<&str>,
+            ) {
+                eprintln!("bind-mount / {}: {}", target_dir.path().display(), e);
+            }
+
+            let mount_dir = Builder::new()
+                .prefix("mount")
+                .tempdir()
+                .expect("create mount directory");
+            let test_dir = Builder::new()
+                .prefix("test")
+                .tempdir()
+                .expect("create test directory");
+            let tmpfile_path = test_dir.path().join("example");
+            let _file = File::create(&tmpfile_path).expect("create temp file");
+
+            mount(
+                Some(test_dir.path()),
+                mount_dir.path(),
+                None::<&str>,
+                MsFlags::MS_BIND | MsFlags::MS_REC,
+                None::<&str>,
+            )
+            .map_err(|e| {
+                format!(
+                    "Failed to bind-mount {} to {}: {}",
+                    test_dir.path().display(),
+                    mount_dir.path().display(),
+                    e
+                )
+            })
+            .unwrap();
+
+            let target_file = target_path
+                .join(mount_dir.path().strip_prefix("/").unwrap())
+                .join(tmpfile_path.file_name().unwrap());
+            let file_visible = target_file.exists();
+
+            match propagation.as_str() {
+                "shared" => {
+                    if !file_visible {
+                        eprintln!(
+                            "Error: shared root propagation failed to expose {:?}",
+                            target_file
+                        );
+                    }
+                }
+                "slave" | "private" => {
+                    if file_visible {
+                        eprintln!(
+                            "Error: {} root propagation unexpectedly exposed {:?}",
+                            propagation, target_file
+                        );
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
+        "unbindable" => {
+            if let Err(e) = mount(
+                Some("/"),
+                target_dir.path(),
+                None::<&str>,
+                MsFlags::MS_BIND | MsFlags::MS_REC,
+                None::<&str>,
+            ) && e != nix::errno::Errno::EINVAL
+            {
+                eprintln!("Error occurred during mount: {}", e);
+            }
+        }
+        _ => {
+            eprintln!("Unrecognized rootfsPropagation: {}", propagation);
+        }
+    }
+}
+
+fn validate_id_mappings(expected_id_mappings: &[LinuxIdMapping], path: &str, property: &str) {
+    let file = match File::open(path) {
+        Ok(f) => f,
+        Err(e) => {
+            eprintln!("Failed to open {}: {}", path, e);
+            return;
+        }
+    };
+
+    let reader = io::BufReader::new(file);
+    let lines: Vec<String> = reader.lines().map_while(|line| line.ok()).collect();
+
+    if expected_id_mappings.len() != lines.len() {
+        eprintln!(
+            "Mismatch in {}: expected {} lines, found {}",
+            property,
+            expected_id_mappings.len(),
+            lines.len()
+        );
+    }
+
+    for (expected, line) in expected_id_mappings.iter().zip(lines.iter()) {
+        let parts: Vec<&str> = line.split_whitespace().collect();
+
+        // "man 7 user_namespaces" explains the format of uid_map and gid_map:
+        // <container_id> <host_id> <map_size>
+        if parts.len() != 3 {
+            eprintln!("Unexpected format in {}: {}", path, line);
+            continue;
+        }
+
+        let actual_container_id = parts.first().unwrap().parse::<u32>().unwrap();
+        let actual_host_id = parts.get(1).unwrap().parse::<u32>().unwrap();
+        let actual_map_size = parts.get(2).unwrap().parse::<u32>().unwrap();
+
+        if !(actual_host_id == expected.host_id()
+            && actual_container_id == expected.container_id()
+            && actual_map_size == expected.size())
+        {
+            eprintln!(
+                "Unexpected {}, expected: ({} {} {}) found: ({} {} {})",
+                property,
+                expected.container_id(),
+                expected.host_id(),
+                expected.size(),
+                actual_container_id,
+                actual_host_id,
+                actual_map_size
+            );
+        }
+    }
+}
+
+pub fn validate_uid_mappings(spec: &Spec) {
+    let linux = spec.linux().as_ref().unwrap();
+
+    let expected_uid_mappings = linux.uid_mappings().as_ref().unwrap();
+    validate_id_mappings(expected_uid_mappings, "/proc/self/uid_map", "uid_mappings");
+
+    let expected_gid_mappings = linux.gid_mappings().as_ref().unwrap();
+    validate_id_mappings(expected_gid_mappings, "/proc/self/gid_map", "gid_mappings");
+}
+
+pub fn validate_net_devices(spec: &Spec) {
+    let mut socket = Socket::new(NETLINK_ROUTE).unwrap();
+    socket.bind_auto().unwrap();
+    let linux = spec.linux().as_ref().unwrap();
+    if let Some(net_devices) = linux.net_devices() {
+        for (name, net_device) in net_devices {
+            let net_device_name = net_device
+                .name()
+                .as_ref()
+                .filter(|d| !d.is_empty())
+                .map_or(name.clone(), |d| d.to_string());
+
+            let mut message = LinkMessage::default();
+            message
+                .attributes
+                .push(LinkAttribute::IfName(net_device_name.clone()));
+
+            let mut req = NetlinkMessage::from(RouteNetlinkMessage::GetLink(message));
+            req.header.flags = NLM_F_REQUEST;
+            req.finalize();
+
+            let mut send_buf = vec![0; req.header.length as usize];
+            req.serialize(&mut send_buf[..]);
+            socket.send(&send_buf[..], 0).unwrap();
+
+            let mut receive_buf = vec![0u8; 4096];
+            let n_received = socket.recv(&mut &mut receive_buf[..], 0).unwrap();
+            let bytes = &receive_buf[..n_received];
+            let rx_packet = <NetlinkMessage<RouteNetlinkMessage>>::deserialize(bytes).unwrap();
+
+            let index = match rx_packet.payload {
+                NetlinkPayload::InnerMessage(RouteNetlinkMessage::NewLink(link)) => {
+                    println!("network device {} is present", net_device_name);
+                    link.header.index
+                }
+                _ => {
+                    eprintln!("network device {} is not present", net_device_name);
+                    continue;
+                }
+            };
+
+            let mut message = AddressMessage::default();
+            message.header.index = index;
+            let mut req = NetlinkMessage::from(RouteNetlinkMessage::GetAddress(message));
+            req.header.flags = NLM_F_REQUEST | NLM_F_DUMP;
+            req.finalize();
+
+            let mut send_buf = vec![0; req.header.length as usize];
+            req.serialize(&mut send_buf[..]);
+            socket.send(&send_buf[..], 0).unwrap();
+
+            let mut receive_buf = vec![0u8; 4096];
+            let n_received = socket.recv(&mut &mut receive_buf[..], 0).unwrap();
+            let bytes = &receive_buf[..n_received];
+            let rx_packet = <NetlinkMessage<RouteNetlinkMessage>>::deserialize(bytes).unwrap();
+
+            match rx_packet.payload {
+                NetlinkPayload::InnerMessage(RouteNetlinkMessage::NewAddress(_address)) => {
+                    println!("address is present for network device {}", net_device_name);
+                }
+                _ => {
+                    eprintln!(
+                        "address is not present for network device {}",
+                        net_device_name
+                    );
+                }
+            }
+        }
     }
 }

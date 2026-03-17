@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 use oci_spec::runtime::{
     LinuxBuilder, LinuxMemoryBuilder, LinuxResourcesBuilder, Spec, SpecBuilder,
 };
-use test_framework::{test_result, ConditionalTest, TestGroup, TestResult};
+use test_framework::{ConditionalTest, TestGroup, TestResult, test_result};
 
 use crate::utils::test_outside_container;
 use crate::utils::test_utils::check_container_created;
@@ -51,7 +51,7 @@ fn test_memory_cgroups() -> TestResult {
     ];
 
     for spec in cases.into_iter() {
-        let test_result = test_outside_container(spec, &|data| {
+        let test_result = test_outside_container(&spec, &|data| {
             test_result!(check_container_created(&data));
 
             TestResult::Passed

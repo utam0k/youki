@@ -9,6 +9,7 @@ mod builder_impl;
 #[allow(clippy::module_inception)]
 mod container;
 mod container_checkpoint;
+mod container_criu;
 mod container_delete;
 mod container_events;
 mod container_kill;
@@ -20,4 +21,6 @@ pub mod state;
 pub mod tenant_builder;
 pub use container::{CheckpointOptions, Container};
 pub use container_checkpoint::CheckpointError;
-pub use state::{ContainerProcessState, ContainerStatus, State};
+#[allow(deprecated)]
+pub use state::ContainerProcessState;
+pub use state::{ContainerStatus, State, StateConversionError};

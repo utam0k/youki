@@ -1,18 +1,18 @@
-use std::env;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
+use std::{env, fs};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use flate2::read::GzDecoder;
 use oci_spec::runtime::{Process, Spec};
-use once_cell::sync::OnceCell;
-use rand::Rng;
+use rand::RngExt;
 use tar::Archive;
 use tempfile::TempDir;
 use uuid::Uuid;
 
-static RUNTIME_PATH: OnceCell<PathBuf> = OnceCell::new();
-static RUNTIMETEST_PATH: OnceCell<PathBuf> = OnceCell::new();
+static RUNTIME_PATH: OnceLock<PathBuf> = OnceLock::new();
+static RUNTIMETEST_PATH: OnceLock<PathBuf> = OnceLock::new();
 
 pub fn set_runtime_path(path: &Path) {
     RUNTIME_PATH.set(path.to_owned()).unwrap();
@@ -41,12 +41,12 @@ pub fn get_project_path() -> PathBuf {
 
 /// This will generate the UUID needed when creating the container.
 pub fn generate_uuid() -> Uuid {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     const CHARSET: &[u8] = b"0123456789abcdefABCDEF";
 
     let rand_string: String = (0..32)
         .map(|_| {
-            let idx = rng.gen_range(0..CHARSET.len());
+            let idx = rng.random_range(0..CHARSET.len());
             CHARSET[idx] as char
         })
         .collect();
@@ -98,4 +98,31 @@ pub fn is_runtime_runc() -> bool {
         Err(_) => false,
         Ok(s) => s == "runc",
     }
+}
+
+pub fn wait_for_file_content(
+    file_path: &PathBuf,
+    expected_content: &str,
+    timeout: std::time::Duration,
+    poll_interval: std::time::Duration,
+) -> anyhow::Result<()> {
+    let start = std::time::Instant::now();
+
+    while start.elapsed() < timeout {
+        if file_path.exists()
+            && let Ok(contents) = fs::read_to_string(file_path)
+            && contents.contains(expected_content)
+        {
+            return Ok(());
+        }
+        std::thread::sleep(poll_interval);
+    }
+
+    let actual_content = fs::read_to_string(file_path)
+        .unwrap_or_else(|_| "(file does not exist or cannot be read)".to_string());
+
+    Err(anyhow!(
+        "Timed out waiting for file {} to contain '{expected_content}', but got: '{actual_content}'",
+        file_path.display(),
+    ))
 }

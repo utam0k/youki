@@ -2,7 +2,7 @@ use anyhow::{Context, Ok, Result};
 use oci_spec::runtime::{
     PosixRlimit, PosixRlimitBuilder, PosixRlimitType, ProcessBuilder, Spec, SpecBuilder,
 };
-use test_framework::{test_result, Test, TestGroup, TestResult};
+use test_framework::{Test, TestGroup, TestResult, test_result};
 
 use crate::utils::test_inside_container;
 use crate::utils::test_utils::CreateOptions;
@@ -55,7 +55,7 @@ fn create_spec() -> Result<Spec> {
 
 fn process_rlimits_test() -> TestResult {
     let spec = test_result!(create_spec());
-    test_inside_container(spec, &CreateOptions::default(), &|_| Ok(()))
+    test_inside_container(&spec, &CreateOptions::default(), &|_| Ok(()))
 }
 
 pub fn get_process_rlimits_test() -> TestGroup {

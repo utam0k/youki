@@ -7,6 +7,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::utils;
 
+pub enum PersonalityDomain {
+    Linux = 0x0000,
+    Linux32 = 0x0008,
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
     #[error("failed to save config")]
@@ -46,8 +51,8 @@ pub struct YoukiConfig {
     pub cgroup_path: PathBuf,
 }
 
-impl<'a> YoukiConfig {
-    pub fn from_spec(spec: &'a Spec, container_id: &str) -> Result<Self> {
+impl YoukiConfig {
+    pub fn from_spec(spec: &Spec, container_id: &str) -> Result<Self> {
         Ok(YoukiConfig {
             hooks: spec.hooks().clone(),
             cgroup_path: utils::get_cgroup_path(

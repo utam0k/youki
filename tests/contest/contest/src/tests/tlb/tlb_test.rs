@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use oci_spec::runtime::{
     LinuxBuilder, LinuxHugepageLimitBuilder, LinuxResourcesBuilder, Spec, SpecBuilder,
 };
-use test_framework::{test_result, ConditionalTest, TestGroup, TestResult};
+use test_framework::{ConditionalTest, TestGroup, TestResult, test_result};
 
 use crate::utils::test_outside_container;
 use crate::utils::test_utils::check_container_created;
@@ -33,11 +33,13 @@ fn make_hugetlb_spec(page_size: &str, limit: i64) -> Spec {
             LinuxBuilder::default()
                 .resources(
                     LinuxResourcesBuilder::default()
-                        .hugepage_limits(vec![LinuxHugepageLimitBuilder::default()
-                            .page_size(page_size.to_owned())
-                            .limit(limit)
-                            .build()
-                            .expect("could not build")])
+                        .hugepage_limits(vec![
+                            LinuxHugepageLimitBuilder::default()
+                                .page_size(page_size.to_owned())
+                                .limit(limit)
+                                .build()
+                                .expect("could not build"),
+                        ])
                         .build()
                         .unwrap(),
                 )
@@ -53,7 +55,7 @@ fn test_wrong_tlb() -> TestResult {
     let page = "3MB";
     let limit = 100 * 3 * 1024 * 1024;
     let spec = make_hugetlb_spec(page, limit);
-    test_outside_container(spec, &|data| {
+    test_outside_container(&spec, &|data| {
         match data.create_result {
             Err(e) => TestResult::Failed(anyhow!(e)),
             Ok(res) => {
@@ -145,13 +147,13 @@ fn validate_rsvd_tlb(id: &str, size: &str, limit: i64) -> TestResult {
 
 fn test_valid_tlb() -> TestResult {
     // When setting the limit just for checking if writing works, the amount of memory
-    // requested does not matter, as all insigned integers will be accepted.
+    // requested does not matter, as all unsigned integers will be accepted.
     // Use 1GiB as an example
     let limit: i64 = 1 << 30;
     let tlb_sizes = get_tlb_sizes();
     for size in tlb_sizes.iter() {
         let spec = make_hugetlb_spec(size, limit);
-        let res = test_outside_container(spec, &|data| {
+        let res = test_outside_container(&spec, &|data| {
             test_result!(check_container_created(&data));
 
             let r = validate_tlb(&data.id, size, limit);
@@ -172,7 +174,7 @@ fn test_valid_rsvd_tlb() -> TestResult {
     let tlb_sizes = get_tlb_sizes();
     for size in tlb_sizes.iter() {
         let spec = make_hugetlb_spec(size, limit);
-        let res = test_outside_container(spec, &|data| {
+        let res = test_outside_container(&spec, &|data| {
             test_result!(check_container_created(&data));
             // Currentle, we write the same value to both limit_in_bytes and rsvd.limit_in_bytes
             let non_rsvd = validate_tlb(&data.id, size, limit);

@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::fs::OpenOptions;
-use std::io::prelude::*;
 use std::io::Write;
+use std::io::prelude::*;
 use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
 
@@ -12,7 +12,7 @@ use oci_spec::runtime::LinuxMemory;
 use super::controller::Controller;
 use crate::common::{self, ControllerOpt, WrapIoResult, WrappedIoError};
 use crate::stats::{
-    self, parse_single_value, MemoryData, MemoryStats, ParseFlatKeyedDataError, StatsProvider,
+    self, MemoryData, MemoryStats, ParseFlatKeyedDataError, StatsProvider, parse_single_value,
 };
 
 const CGROUP_MEMORY_SWAP_LIMIT: &str = "memory.memsw.limit_in_bytes";
@@ -111,11 +111,7 @@ impl Controller for Memory {
                 )?;
             }
 
-            if controller_opt.disable_oom_killer {
-                common::write_cgroup_file(cgroup_root.join(CGROUP_MEMORY_OOM_CONTROL), 0)?;
-            } else {
-                common::write_cgroup_file(cgroup_root.join(CGROUP_MEMORY_OOM_CONTROL), 1)?;
-            }
+            Self::set_oom_control(cgroup_root, controller_opt.disable_oom_killer)?;
 
             if let Some(swappiness) = memory.swappiness() {
                 if swappiness <= 100 {
@@ -206,6 +202,14 @@ impl Memory {
         };
 
         Ok(memory_data)
+    }
+
+    fn set_oom_control(cgroup_root: &Path, disable_oom_killer: bool) -> Result<(), WrappedIoError> {
+        if disable_oom_killer {
+            common::write_cgroup_file(cgroup_root.join(CGROUP_MEMORY_OOM_CONTROL), 1)
+        } else {
+            common::write_cgroup_file(cgroup_root.join(CGROUP_MEMORY_OOM_CONTROL), 0)
+        }
     }
 
     fn hierarchy_enabled(cgroup_path: &Path) -> Result<bool, WrappedIoError> {
@@ -426,6 +430,22 @@ mod tests {
         let content =
             std::fs::read_to_string(tmp.path().join(CGROUP_MEMORY_LIMIT)).expect("Read to string");
         assert_eq!(limit.to_string(), content)
+    }
+
+    #[test]
+    fn test_disable_oom_kill() {
+        let tmp = tempfile::tempdir().unwrap();
+        set_fixture(tmp.path(), CGROUP_MEMORY_OOM_CONTROL, "0")
+            .expect("Set fixure for oom control");
+        Memory::set_oom_control(tmp.path(), true).expect("Set oom control");
+        let content = std::fs::read_to_string(tmp.path().join(CGROUP_MEMORY_OOM_CONTROL))
+            .expect("Read to string");
+        assert_eq!("1", content);
+
+        Memory::set_oom_control(tmp.path(), false).expect("Set oom control");
+        let content = std::fs::read_to_string(tmp.path().join(CGROUP_MEMORY_OOM_CONTROL))
+            .expect("Read to string");
+        assert_eq!("0", content);
     }
 
     #[test]

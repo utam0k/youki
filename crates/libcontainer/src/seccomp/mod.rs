@@ -146,7 +146,7 @@ pub fn initialize_seccomp(seccomp: &LinuxSeccomp) -> Result<Option<io::RawFd>> {
     tracing::trace!(default_action = ?seccomp.default_action(), errno = ?seccomp.default_errno_ret(), "initializing seccomp");
     let default_action = translate_action(seccomp.default_action(), seccomp.default_errno_ret())?;
     let mut ctx =
-        ScmpFilterContext::new_filter(default_action).map_err(|err| SeccompError::NewFilter {
+        ScmpFilterContext::new(default_action).map_err(|err| SeccompError::NewFilter {
             source: err,
             default: seccomp.default_action(),
         })?;
@@ -157,6 +157,9 @@ pub fn initialize_seccomp(seccomp: &LinuxSeccomp) -> Result<Option<io::RawFd>> {
                 LinuxSeccompFilterFlag::SeccompFilterFlagLog => ctx.set_ctl_log(true),
                 LinuxSeccompFilterFlag::SeccompFilterFlagTsync => ctx.set_ctl_tsync(true),
                 LinuxSeccompFilterFlag::SeccompFilterFlagSpecAllow => ctx.set_ctl_ssb(true),
+                LinuxSeccompFilterFlag::SeccompFilterFlagWaitKillableRecv => {
+                    ctx.set_ctl_waitkill(true)
+                }
             }
             .map_err(|err| SeccompError::SetFilterFlag {
                 source: err,

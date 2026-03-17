@@ -86,7 +86,12 @@ impl StatsProvider for Cpu {
 impl Cpu {
     fn apply(path: &Path, cpu: &LinuxCpu) -> Result<(), V2CpuControllerError> {
         if Self::is_realtime_requested(cpu) {
-            return Err(V2CpuControllerError::RealtimeV2);
+            let runtime = cpu.realtime_runtime().unwrap_or(0);
+            let period = cpu.realtime_period().unwrap_or(0);
+
+            if runtime > 0 || period > 0 {
+                return Err(V2CpuControllerError::RealtimeV2);
+            }
         }
 
         if let Some(mut shares) = cpu.shares() {
@@ -128,13 +133,35 @@ impl Cpu {
         Ok(())
     }
 
+    // Convert CPU shares (cgroup v1) into CPU weight (cgroup v2).
+    // cgroup v1 shares span [2, 262_144] with a default of 1_024.
+    // cgroup v2 weight spans [1, 10_000] with a default of 100.
+    // A shares value of 0 keeps the field unset.
+    // The quadratic fit mirrors runc's mapping to keep extrema and defaults.
+    // For reference, see:
+    // https://github.com/opencontainers/runc/releases/tag/v1.3.2
+    // https://github.com/opencontainers/cgroups/pull/20
     fn convert_shares_to_cgroup2(shares: u64) -> u64 {
         if shares == 0 {
             return 0;
         }
 
-        let weight = 1 + ((shares.saturating_sub(2)) * 9999) / 262142;
-        weight.min(MAX_CPU_WEIGHT)
+        const MIN_SHARES: u64 = 2;
+        const MAX_SHARES: u64 = 262_144;
+
+        if shares <= MIN_SHARES {
+            return 1;
+        }
+
+        if shares >= MAX_SHARES {
+            return MAX_CPU_WEIGHT;
+        }
+
+        let log_shares = (shares as f64).log2();
+        let exponent = (log_shares * log_shares + 125.0 * log_shares) / 612.0 - 7.0 / 34.0;
+        let weight = (10f64.powf(exponent)).ceil() as u64;
+
+        weight.clamp(1, MAX_CPU_WEIGHT)
     }
 
     fn is_realtime_requested(cpu: &LinuxCpu) -> bool {
@@ -152,7 +179,7 @@ impl Cpu {
     fn create_period_only_value(
         cpu_max_file: &Path,
         period: u64,
-    ) -> Result<Option<Cow<str>>, V2CpuControllerError> {
+    ) -> Result<Option<Cow<'_, str>>, V2CpuControllerError> {
         let old_cpu_max = common::read_cgroup_file(cpu_max_file)?;
         if let Some(old_quota) = old_cpu_max.split_whitespace().next() {
             return Ok(Some(format!("{old_quota} {period}").into()));
@@ -185,7 +212,7 @@ mod tests {
         // assert
         let content = fs::read_to_string(weight)
             .unwrap_or_else(|_| panic!("read {CGROUP_CPU_WEIGHT} file content"));
-        assert_eq!(content, 840.to_string());
+        assert_eq!(content, 1204.to_string());
     }
 
     #[test]
@@ -368,5 +395,54 @@ mod tests {
 
         let actual = fs::read_to_string(burst_file).expect("read burst file");
         assert_eq!(actual, expected.to_string());
+    }
+
+    #[test]
+    fn test_cgroupsv2_but_runtime_set_to_zero() {
+        // arrange
+        let tmp = tempfile::tempdir().unwrap();
+        let cpu = LinuxCpuBuilder::default()
+            .realtime_runtime(0i64)
+            .build()
+            .unwrap();
+
+        // act
+        let result = Cpu::apply(tmp.path(), &cpu);
+
+        // assert
+        assert!(result.is_ok())
+    }
+
+    #[test]
+    fn test_cgroupsv2_but_period_set_to_zero() {
+        // arrange
+        let tmp = tempfile::tempdir().unwrap();
+        let cpu = LinuxCpuBuilder::default()
+            .realtime_period(0u64)
+            .build()
+            .unwrap();
+
+        // act
+        let result = Cpu::apply(tmp.path(), &cpu);
+
+        // assert
+        assert!(result.is_ok())
+    }
+
+    #[test]
+    fn test_cgroupsv2_but_period_and_runtime_set_to_zero() {
+        // arrange
+        let tmp = tempfile::tempdir().unwrap();
+        let cpu = LinuxCpuBuilder::default()
+            .realtime_period(0u64)
+            .realtime_runtime(0i64)
+            .build()
+            .unwrap();
+
+        // act
+        let result = Cpu::apply(tmp.path(), &cpu);
+
+        // assert
+        assert!(result.is_ok())
     }
 }

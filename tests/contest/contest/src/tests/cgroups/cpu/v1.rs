@@ -2,7 +2,7 @@ use std::path::Path;
 
 use libcgroups::common;
 use num_cpus;
-use test_framework::{test_result, ConditionalTest, TestGroup, TestResult};
+use test_framework::{ConditionalTest, TestGroup, TestResult, test_result};
 
 use super::{create_cpu_spec, create_empty_spec, create_spec};
 use crate::utils::test_outside_container;
@@ -205,7 +205,7 @@ fn test_cpu_cgroups() -> TestResult {
 
     for case in cases.into_iter() {
         let spec = test_result!(create_spec(cgroup_name, case));
-        let test_result = test_outside_container(spec, &|data| {
+        let test_result = test_outside_container(&spec, &|data| {
             test_result!(check_container_created(&data));
 
             TestResult::Passed
@@ -223,7 +223,7 @@ fn test_empty_cpu() -> TestResult {
     let cgroup_name = "test_empty_cpu";
     let spec = test_result!(create_empty_spec(cgroup_name));
 
-    test_outside_container(spec, &|data| {
+    test_outside_container(&spec, &|data| {
         test_result!(check_container_created(&data));
         TestResult::Passed
     })
@@ -249,7 +249,7 @@ fn test_cpu_idle_set() -> TestResult {
     ));
 
     let spec = test_result!(create_spec(cgroup_name, cpu));
-    test_outside_container(spec, &|data| {
+    test_outside_container(&spec, &|data| {
         test_result!(check_container_created(&data));
         TestResult::Passed
     })
@@ -273,7 +273,7 @@ fn test_cpu_idle_default() -> TestResult {
         realtime_runtime,
     ));
     let spec = test_result!(create_spec(cgroup_name, cpu));
-    test_outside_container(spec, &|data| {
+    test_outside_container(&spec, &|data| {
         test_result!(check_container_created(&data));
         TestResult::Passed
     })

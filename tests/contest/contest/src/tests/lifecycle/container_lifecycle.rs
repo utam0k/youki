@@ -1,11 +1,13 @@
+use std::path;
 use std::thread::sleep;
 use std::time::Duration;
 
+use oci_spec::runtime::Spec;
 use test_framework::{TestResult, TestableGroup};
 
 use super::util::criu_installed;
 use super::{checkpoint, create, delete, exec, kill, start, state};
-use crate::utils::{generate_uuid, prepare_bundle};
+use crate::utils::{generate_uuid, prepare_bundle, set_config};
 
 // By experimenting, somewhere around 50 is enough for youki process
 // to get the kill signal and shut down
@@ -33,7 +35,24 @@ impl ContainerLifecycle {
         }
     }
 
+    pub fn set_id(&mut self, id: &str) {
+        self.container_id = id.to_string();
+    }
+
+    pub fn get_id(&self) -> &str {
+        &self.container_id
+    }
+
+    pub fn get_project_path(&self) -> &path::Path {
+        self.project_path.path()
+    }
+
     pub fn create(&self) -> TestResult {
+        create::create(self.project_path.path(), &self.container_id).into()
+    }
+
+    pub fn create_with_spec(&self, spec: Spec) -> TestResult {
+        set_config(&self.project_path, &spec).unwrap();
         create::create(self.project_path.path(), &self.container_id).into()
     }
 
@@ -85,6 +104,26 @@ impl ContainerLifecycle {
             self.project_path.path(),
             &self.container_id,
         )
+    }
+
+    /// Wait for the container to reach a specific state
+    pub fn wait_for_state(&self, expected_state: &str, timeout: Duration) -> TestResult {
+        use crate::tests::lifecycle::state;
+
+        match state::wait_for_state(
+            self.project_path.path(),
+            &self.container_id,
+            expected_state,
+            timeout,
+            Duration::from_millis(100),
+        ) {
+            Ok(_) => TestResult::Passed,
+            Err(e) => TestResult::Failed(anyhow::anyhow!(
+                "Container failed to reach {} state: {}",
+                expected_state,
+                e
+            )),
+        }
     }
 }
 

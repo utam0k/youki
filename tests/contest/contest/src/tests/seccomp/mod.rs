@@ -29,15 +29,17 @@ fn seccomp_test() -> TestResult {
     let spec = create_spec(
         LinuxSeccompBuilder::default()
             .default_action(LinuxSeccompAction::ScmpActAllow)
-            .syscalls(vec![LinuxSyscallBuilder::default()
-                .names(vec![String::from("getcwd")])
-                .action(LinuxSeccompAction::ScmpActErrno)
-                .build()
-                .unwrap()])
+            .syscalls(vec![
+                LinuxSyscallBuilder::default()
+                    .names(vec![String::from("getcwd")])
+                    .action(LinuxSeccompAction::ScmpActErrno)
+                    .build()
+                    .unwrap(),
+            ])
             .build()
             .unwrap(),
     );
-    test_inside_container(spec, &CreateOptions::default(), &|_| Ok(()))
+    test_inside_container(&spec, &CreateOptions::default(), &|_| Ok(()))
 }
 
 pub fn get_seccomp_test() -> TestGroup {

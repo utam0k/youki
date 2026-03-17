@@ -1,8 +1,8 @@
 use anyhow::{Context, Result};
 use oci_spec::runtime::{ProcessBuilder, Spec, SpecBuilder};
-use test_framework::{test_result, Test, TestGroup, TestResult};
+use test_framework::{Test, TestGroup, TestResult, test_result};
 
-use crate::utils::test_utils::{test_inside_container, CreateOptions};
+use crate::utils::test_utils::{CreateOptions, test_inside_container};
 
 fn create_spec() -> Result<Spec> {
     SpecBuilder::default()
@@ -18,7 +18,7 @@ fn create_spec() -> Result<Spec> {
 fn no_pivot_test() -> TestResult {
     let spec = test_result!(create_spec());
     test_inside_container(
-        spec,
+        &spec,
         &CreateOptions::default().with_no_pivot_root(),
         &|_| Ok(()),
     )
