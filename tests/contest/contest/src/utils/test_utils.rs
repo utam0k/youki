@@ -145,13 +145,13 @@ fn runtime_command<P: AsRef<Path>>(dir: P) -> Command {
 }
 
 pub fn test_outside_container(
-    spec: Spec,
+    spec: &Spec,
     execute_test: &dyn Fn(ContainerData) -> TestResult,
 ) -> TestResult {
     let id = generate_uuid();
     let id_str = id.to_string();
     let bundle = prepare_bundle().unwrap();
-    set_config(&bundle, &spec).unwrap();
+    set_config(&bundle, spec).unwrap();
     let options = CreateOptions::default();
     let create_result = create_container(&id_str, &bundle, &options).unwrap().wait();
     let (out, err) = get_state(&id_str, &bundle).unwrap();
@@ -173,7 +173,7 @@ pub fn test_outside_container(
 
 // mostly needs a name that better expresses what this actually does
 pub fn test_inside_container(
-    spec: Spec,
+    spec: &Spec,
     options: &CreateOptions,
     setup_for_test: &dyn Fn(&Path) -> Result<()>,
 ) -> TestResult {
@@ -186,7 +186,7 @@ pub fn test_inside_container(
         &bundle.as_ref().join("bundle").join("rootfs")
     ));
 
-    set_config(&bundle, &spec).unwrap();
+    set_config(&bundle, spec).unwrap();
     // as we have to run runtimetest inside the container, and is expects
     // the config.json to be at path /config.json we save it there
     let path = bundle
@@ -222,7 +222,12 @@ pub fn test_inside_container(
         .wait_with_output()
     {
         Ok(c) => c,
-        Err(e) => return TestResult::Failed(anyhow!("container start failed : {:?}", e)),
+        Err(e) => {
+            // given that start has failed, we can be pretty sure that create has either failed
+            // or completed already, so we wait on it so it does not become a zombie process
+            let _ = create_process.wait_with_output();
+            return TestResult::Failed(anyhow!("container start failed : {:?}", e));
+        }
     };
 
     let create_output = create_process

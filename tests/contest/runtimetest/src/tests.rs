@@ -1,6 +1,6 @@
 use std::env;
 use std::ffi::OsStr;
-use std::fs::{self, read_dir};
+use std::fs::{self, read_dir, File};
 use std::os::linux::fs::MetadataExt;
 use std::os::unix::fs::{FileTypeExt, PermissionsExt};
 use std::path::Path;
@@ -8,6 +8,7 @@ use std::path::Path;
 use anyhow::{bail, Result};
 use nix::errno::Errno;
 use nix::libc;
+use nix::mount::{mount, MsFlags};
 use nix::sys::resource::{getrlimit, Resource};
 use nix::sys::stat::{umask, Mode};
 use nix::sys::utsname;
@@ -16,6 +17,7 @@ use oci_spec::runtime::IOPriorityClass::{self, IoprioClassBe, IoprioClassIdle, I
 use oci_spec::runtime::{
     LinuxDevice, LinuxDeviceType, LinuxSchedulerPolicy, PosixRlimit, PosixRlimitType, Spec,
 };
+use tempfile::Builder;
 
 use crate::utils::{
     self, test_dir_read_access, test_dir_write_access, test_read_access, test_write_access,
@@ -818,5 +820,147 @@ pub fn validate_fd_control(_spec: &Spec) {
 
     if fd_details.len() != expected_num_fds {
         eprintln!("mismatched fds inside container! {:?}", fd_details);
+    }
+}
+
+pub fn validate_masked_paths(spec: &Spec) {
+    let linux = spec.linux().as_ref().unwrap();
+    let masked_paths = match linux.masked_paths() {
+        Some(p) => p,
+        None => {
+            eprintln!("in masked paths, expected some masked paths to be set, found none");
+            return;
+        }
+    };
+
+    for path in masked_paths.iter().map(Path::new) {
+        if !path.is_absolute() {
+            eprintln!("in masked paths, the path must be absolute.")
+        }
+        match test_read_access(path) {
+            Ok(true) => {
+                eprintln!(
+                    "in masked paths, expected path {:?} to be masked, but was found readable",
+                    path.iter().as_path(),
+                );
+                return;
+            }
+            Ok(false) => { /* This is expected */ }
+            Err(e) => {
+                let errno = Errno::from_raw(e.raw_os_error().unwrap());
+                if errno == Errno::ENOENT {
+                    /* This is expected */
+                } else {
+                    eprintln!(
+                        "in masked paths, error in testing read access for path {:?} : {errno:?}",
+                        path.iter().as_path(),
+                    );
+                    return;
+                }
+            }
+        }
+    }
+}
+
+pub fn validate_rootfs_propagation(spec: &Spec) {
+    let linux = spec.linux().as_ref().unwrap();
+    let propagation = linux.rootfs_propagation().as_ref().unwrap();
+
+    let target_dir = Builder::new()
+        .prefix("target")
+        .tempdir()
+        .expect("create target directory");
+    let target_path = target_dir.path();
+
+    match propagation.as_str() {
+        "shared" | "slave" | "private" => {
+            if let Err(e) = mount(
+                Some("/"),
+                target_dir.path(),
+                None::<&str>,
+                MsFlags::MS_BIND | MsFlags::MS_REC,
+                None::<&str>,
+            ) {
+                eprintln!("bind-mount / {}: {}", target_dir.path().display(), e);
+            }
+
+            let mount_dir = Builder::new()
+                .prefix("mount")
+                .tempdir()
+                .expect("create mount directory");
+            let test_dir = Builder::new()
+                .prefix("test")
+                .tempdir()
+                .expect("create test directory");
+            let tmpfile_path = test_dir.path().join("example");
+            let _file = File::create(&tmpfile_path).expect("create temp file");
+
+            mount(
+                Some(test_dir.path()),
+                mount_dir.path(),
+                None::<&str>,
+                MsFlags::MS_BIND | MsFlags::MS_REC,
+                None::<&str>,
+            )
+            .map_err(|e| {
+                format!(
+                    "Failed to bind-mount {} to {}: {}",
+                    test_dir.path().display(),
+                    mount_dir.path().display(),
+                    e
+                )
+            })
+            .unwrap();
+
+            let target_file = target_path
+                .join(mount_dir.path().strip_prefix("/").unwrap())
+                .join(tmpfile_path.file_name().unwrap());
+            let file_visible = target_file.exists();
+
+            match propagation.as_str() {
+                "shared" => {
+                    if file_visible {
+                        println!("shared root propagation exposes {:?}", target_file);
+                    } else {
+                        eprintln!(
+                            "Error: shared root propagation failed to expose {:?}",
+                            target_file
+                        );
+                    }
+                }
+                "slave" | "private" => {
+                    if !file_visible {
+                        println!(
+                            "{} root propagation does not expose {:?}",
+                            propagation, target_file
+                        );
+                    } else {
+                        eprintln!(
+                            "Error: {} root propagation unexpectedly exposed {:?}",
+                            propagation, target_file
+                        );
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
+        "unbindable" => {
+            if let Err(e) = mount(
+                Some("/"),
+                target_dir.path(),
+                None::<&str>,
+                MsFlags::MS_BIND | MsFlags::MS_REC,
+                None::<&str>,
+            ) {
+                if e == nix::errno::Errno::EINVAL {
+                    println!("root propagation is unbindable");
+                } else {
+                    eprintln!("Error occurred during mount: {}", e);
+                }
+            }
+        }
+        _ => {
+            eprintln!("Unrecognized rootfsPropagation: {}", propagation);
+        }
     }
 }
