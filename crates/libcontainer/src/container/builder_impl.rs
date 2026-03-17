@@ -16,8 +16,8 @@ use crate::process::intel_rdt::delete_resctrl_subdirectory;
 use crate::process::{self};
 use crate::syscall::syscall::SyscallType;
 use crate::user_ns::UserNamespaceConfig;
+use crate::utils;
 use crate::workload::Executor;
-use crate::{hooks, utils};
 
 pub(super) struct ContainerBuilderImpl {
     /// Flag indicating if an init or a tenant container should be created
@@ -97,16 +97,6 @@ impl ContainerBuilderImpl {
             .as_ref()
             .ok_or(MissingSpecError::Process)?;
 
-        if matches!(self.container_type, ContainerType::InitContainer) {
-            if let Some(hooks) = self.spec.hooks() {
-                hooks::run_hooks(
-                    hooks.create_runtime().as_ref(),
-                    self.container.as_ref(),
-                    None,
-                )?
-            }
-        }
-
         // Need to create the notify socket before we pivot root, since the unix
         // domain socket used here is outside of the rootfs of container. During
         // exec, need to create the socket before we enter into existing mount
@@ -175,6 +165,7 @@ impl ContainerBuilderImpl {
             stdout: self.stdout.as_ref().map(|x| x.as_raw_fd()),
             stderr: self.stderr.as_ref().map(|x| x.as_raw_fd()),
             as_sibling: self.as_sibling,
+            pid_file: self.pid_file.to_owned(),
         };
 
         let (init_pid, need_to_clean_up_intel_rdt_dir) =
@@ -184,14 +175,6 @@ impl ContainerBuilderImpl {
                     LibcontainerError::MainProcess(err)
                 },
             )?;
-
-        // if file to write the pid to is specified, write pid of the child
-        if let Some(pid_file) = &self.pid_file {
-            fs::write(pid_file, format!("{init_pid}")).map_err(|err| {
-                tracing::error!("failed to write pid to file: {}", err);
-                LibcontainerError::OtherIO(err)
-            })?;
-        }
 
         if let Some(container) = &mut self.container {
             // update status and pid of the container process

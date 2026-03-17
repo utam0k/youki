@@ -1,7 +1,18 @@
-use nix::sys::wait::{waitpid, WaitStatus};
-use nix::unistd::Pid;
+use std::collections::HashMap;
+use std::fs;
+use std::fs::File;
+use std::os::fd::AsRawFd;
+use std::path::PathBuf;
 
-use crate::process::args::ContainerArgs;
+use nix::sys::wait::{WaitStatus, waitpid};
+use nix::unistd::Pid;
+use oci_spec::runtime::{Linux, LinuxNamespaceType};
+#[cfg(feature = "libseccomp")]
+use oci_spec::runtime::{SECCOMP_FD_NAME, VERSION as OCI_VERSION};
+
+use crate::hooks;
+use crate::network::network_device::dev_change_net_namespace;
+use crate::process::args::{ContainerArgs, ContainerType};
 use crate::process::fork::{self, CloneCb};
 use crate::process::intel_rdt::setup_intel_rdt;
 use crate::process::{channel, container_intermediate_process};
@@ -27,8 +38,14 @@ pub enum ProcessError {
     #[error("failed seccomp listener")]
     #[cfg(feature = "libseccomp")]
     SeccompListener(#[from] crate::process::seccomp_listener::SeccompListenerError),
+    #[error("failed setup network device")]
+    Network(#[from] crate::network::NetworkError),
     #[error("failed syscall")]
     SyscallOther(#[source] SyscallError),
+    #[error("failed hooks {0}")]
+    Hooks(#[from] crate::hooks::HookError),
+    #[error("failed to build OCI state: {0}")]
+    OciStateBuild(String),
 }
 
 type Result<T> = std::result::Result<T, ProcessError>;
@@ -94,10 +111,7 @@ pub fn container_main_process(container_args: &ContainerArgs) -> Result<(Pid, bo
     })?;
 
     let (mut inter_sender, inter_receiver) = inter_chan;
-    #[cfg(feature = "libseccomp")]
     let (mut init_sender, init_receiver) = init_chan;
-    #[cfg(not(feature = "libseccomp"))]
-    let (init_sender, init_receiver) = init_chan;
 
     // If creating a container with new user namespace, the intermediate process will ask
     // the main process to set up uid and gid mapping, once the intermediate
@@ -121,29 +135,6 @@ pub fn container_main_process(container_args: &ContainerArgs) -> Result<(Pid, bo
     let mut need_to_clean_up_intel_rdt_subdirectory = false;
 
     if let Some(linux) = container_args.spec.linux() {
-        #[cfg(feature = "libseccomp")]
-        if let Some(seccomp) = linux.seccomp() {
-            let state = crate::container::ContainerProcessState {
-                oci_version: container_args.spec.version().to_string(),
-                // runc hardcode the `seccompFd` name for fds.
-                fds: vec![String::from("seccompFd")],
-                pid: init_pid.as_raw(),
-                metadata: seccomp.listener_metadata().to_owned().unwrap_or_default(),
-                state: container_args
-                    .container
-                    .as_ref()
-                    .ok_or(ProcessError::ContainerStateRequired)?
-                    .state
-                    .clone(),
-            };
-            crate::process::seccomp_listener::sync_seccomp(
-                seccomp,
-                &state,
-                &mut init_sender,
-                &mut main_receiver,
-            )?;
-        }
-
         if let Some(intel_rdt) = linux.intel_rdt() {
             let container_id = container_args
                 .container
@@ -151,6 +142,87 @@ pub fn container_main_process(container_args: &ContainerArgs) -> Result<(Pid, bo
                 .map(|container| container.id());
             need_to_clean_up_intel_rdt_subdirectory =
                 setup_intel_rdt(container_id, &init_pid, intel_rdt)?;
+        }
+    }
+
+    // if file to write the pid to is specified, write pid of the child
+    if let Some(pid_file) = &container_args.pid_file {
+        if let Err(err) = fs::write(pid_file, format!("{init_pid}")) {
+            tracing::warn!("failed to write pid to file: {err}");
+        }
+    }
+
+    if matches!(container_args.container_type, ContainerType::InitContainer) {
+        if let Some(hooks) = container_args.spec.hooks() {
+            main_receiver.wait_for_hook_request()?;
+            if let Some(container_for_hooks) = &container_args.container {
+                hooks::run_hooks(
+                    hooks.prestart().as_ref(),
+                    Some(&container_for_hooks.state),
+                    None,
+                    Some(init_pid),
+                )
+                .map_err(|err| {
+                    tracing::error!("failed to run prestart hooks: {}", err);
+                    err
+                })?;
+
+                hooks::run_hooks(
+                    hooks.create_runtime().as_ref(),
+                    Some(&container_for_hooks.state),
+                    None,
+                    Some(init_pid),
+                )
+                .map_err(|err| {
+                    tracing::error!("failed to run create runtime hooks: {}", err);
+                    err
+                })?;
+            }
+            init_sender.hook_done()?;
+        }
+    }
+
+    if let Some(linux) = container_args.spec.linux() {
+        move_network_devices_to_container(linux, init_pid, &mut main_receiver, &mut init_sender)?;
+
+        #[cfg(feature = "libseccomp")]
+        if let Some(seccomp) = linux.seccomp() {
+            let container = container_args
+                .container
+                .as_ref()
+                .ok_or(ProcessError::ContainerStateRequired)?;
+
+            // Determine OCI status based on container type (matching runc behavior)
+            let oci_status = match container_args.container_type {
+                ContainerType::InitContainer => oci_spec::runtime::ContainerState::Creating,
+                ContainerType::TenantContainer { .. } => oci_spec::runtime::ContainerState::Running,
+            };
+
+            // Build OCI-compliant ContainerProcessState using builder pattern
+            let oci_state = oci_spec::runtime::StateBuilder::default()
+                .version(OCI_VERSION)
+                .id(container.state.id.clone())
+                .status(oci_status)
+                .pid(init_pid.as_raw())
+                .bundle(container.state.bundle.clone())
+                .annotations(container.state.annotations.clone().unwrap_or_default())
+                .build()
+                .map_err(|e| ProcessError::OciStateBuild(e.to_string()))?;
+
+            let state = oci_spec::runtime::ContainerProcessStateBuilder::default()
+                .version(OCI_VERSION)
+                .fds(vec![SECCOMP_FD_NAME.to_string()])
+                .pid(init_pid.as_raw())
+                .metadata(seccomp.listener_metadata().clone().unwrap_or_default())
+                .state(oci_state)
+                .build()
+                .map_err(|e| ProcessError::OciStateBuild(e.to_string()))?;
+            crate::process::seccomp_listener::sync_seccomp(
+                seccomp,
+                &state,
+                &mut init_sender,
+                &mut main_receiver,
+            )?;
         }
     }
 
@@ -229,12 +301,78 @@ fn setup_mapping(config: &UserNamespaceConfig, pid: Pid) -> Result<()> {
     Ok(())
 }
 
+/// Moves configured network devices from the host to the container's network namespace.
+/// This function waits for the init process to join its namespace, then transfers each
+/// configured device while preserving network addresses. Returns early if the container
+/// runs in the host network namespace.
+fn move_network_devices_to_container(
+    linux: &Linux,
+    init_pid: Pid,
+    main_receiver: &mut channel::MainReceiver,
+    init_sender: &mut channel::InitSender,
+) -> Result<()> {
+    // Early return if there are no network devices to move
+    let devices = match linux.net_devices() {
+        Some(devs) if !devs.is_empty() => devs,
+        _ => return Ok(()),
+    };
+
+    if let Some(namespaces) = linux.namespaces() {
+        // network devices are not moved for containers running in the host network.
+        let net_ns = match namespaces
+            .iter()
+            .find(|ns| ns.typ() == LinuxNamespaceType::Network)
+        {
+            Some(ns) => ns,
+            None => return Ok(()),
+        };
+
+        // Wait for the init process to signal that it has joined the network namespace
+        // and is ready for network device setup
+        main_receiver.wait_for_network_setup_ready()?;
+
+        // the container init process has already joined the provided net namespace,
+        // so we can use the process's net ns path directly.
+        let default_ns_path = PathBuf::from(format!("/proc/{}/ns/net", init_pid.as_raw()));
+        let ns_path = net_ns.path().as_deref().unwrap_or(&default_ns_path);
+
+        // Open the network namespace file and validate it exists before moving devices
+        let netns_file = File::open(ns_path).map_err(|err| {
+            tracing::error!(
+                "failed to open network namespace at {}: {}",
+                ns_path.display(),
+                err
+            );
+            ProcessError::Network(err.into())
+        })?;
+        let netns_fd = netns_file.as_raw_fd();
+
+        // If moving any of the network devices fails, we return an error immediately.
+        // The runtime spec requires that the kernel handles moving back any devices
+        // that were successfully moved before the failure occurred.
+        // See: https://github.com/opencontainers/runtime-spec/blob/27cb0027fd92ef81eda1ea3a8153b8337f56d94a/config-linux.md#namespace-lifecycle-and-container-termination
+        let addrs_map = devices
+            .iter()
+            .map(|(name, net_dev)| {
+                let addrs = dev_change_net_namespace(name, netns_fd, net_dev).map_err(|err| {
+                    tracing::error!("failed to dev_change_net_namespace: {}", err);
+                    err
+                })?;
+                Ok((name.clone(), addrs))
+            })
+            .collect::<Result<HashMap<String, Vec<crate::network::cidr::CidrAddress>>>>()?;
+        init_sender.move_network_device(addrs_map)?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::fs;
 
     use anyhow::Result;
-    use nix::sched::{unshare, CloneFlags};
+    use nix::sched::{CloneFlags, unshare};
     use nix::unistd::{self, getgid, getuid};
     use oci_spec::runtime::LinuxIdMappingBuilder;
     use serial_test::serial;

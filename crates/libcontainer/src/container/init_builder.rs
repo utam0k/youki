@@ -12,6 +12,7 @@ use crate::config::YoukiConfig;
 use crate::error::{ErrInvalidSpec, LibcontainerError, MissingSpecError};
 use crate::notify_socket::NOTIFY_FILE;
 use crate::process::args::ContainerType;
+use crate::syscall::syscall::create_syscall;
 use crate::{apparmor, tty, user_ns, utils};
 
 // Builder that can be used to configure the properties of a new container
@@ -176,8 +177,10 @@ impl InitContainerBuilder {
                     LibcontainerError::OtherIO(err)
                 })?;
                 if !apparmor_is_enabled {
-                    tracing::error!(?profile,
-                        "apparmor profile exists in the spec, but apparmor is not activated on this system");
+                    tracing::error!(
+                        ?profile,
+                        "apparmor profile exists in the spec, but apparmor is not activated on this system"
+                    );
                     Err(ErrInvalidSpec::AppArmorNotEnabled)?;
                 }
             }
@@ -188,7 +191,12 @@ impl InitContainerBuilder {
                 match iop_class_res {
                     Ok(iop_class) => {
                         if !(0..=7).contains(&priority) {
-                            tracing::error!(?priority, "io priority '{}' not between 0 and 7 (inclusive), class '{}' not in (IO_PRIO_CLASS_RT,IO_PRIO_CLASS_BE,IO_PRIO_CLASS_IDLE)",priority, iop_class);
+                            tracing::error!(
+                                ?priority,
+                                "io priority '{}' not between 0 and 7 (inclusive), class '{}' not in (IO_PRIO_CLASS_RT,IO_PRIO_CLASS_BE,IO_PRIO_CLASS_IDLE)",
+                                priority,
+                                iop_class
+                            );
                             Err(ErrInvalidSpec::IoPriority)?;
                         }
                     }
@@ -200,7 +208,14 @@ impl InitContainerBuilder {
             }
         }
 
-        utils::validate_spec_for_new_user_ns(spec)?;
+        if let Some(mounts) = spec.mounts() {
+            utils::validate_mount_options(mounts)?;
+        }
+
+        let syscall = create_syscall();
+        utils::validate_spec_for_new_user_ns(spec, &*syscall)?;
+        utils::validate_spec_for_net_devices(spec, &*syscall)
+            .map_err(LibcontainerError::NetDevicesError)?;
 
         Ok(())
     }

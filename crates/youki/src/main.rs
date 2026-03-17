@@ -7,7 +7,8 @@ mod rootpath;
 mod workload;
 
 use anyhow::{Context, Result};
-use clap::{crate_version, CommandFactory, Parser};
+use clap::{CommandFactory, Parser};
+use libcontainer::syscall::syscall::create_syscall;
 use liboci_cli::{CommonCmd, GlobalOpts, StandardCmd};
 
 use crate::commands::info;
@@ -23,28 +24,12 @@ struct YoukiExtendOpts {
     pub log_level: Option<String>,
 }
 
-/// output Youki version in Moby compatible format
-#[macro_export]
-macro_rules! youki_version {
-    // For compatibility with Moby, match format here:
-    // https://github.com/moby/moby/blob/65cc84abc522a564699bb171ca54ea1857256d10/daemon/info_unix.go#L280
-    () => {
-        concat!(
-            "version ",
-            crate_version!(),
-            "\ncommit: ",
-            crate_version!(),
-            "-0-",
-            env!("VERGEN_GIT_SHA")
-        )
-    };
-}
-
 // High-level commandline option definition
 // This takes global options as well as individual commands as specified in [OCI runtime-spec](https://github.com/opencontainers/runtime-spec/blob/master/runtime.md)
 // Also check [runc commandline documentation](https://github.com/opencontainers/runc/blob/master/man/runc.8.md) for more explanation
 #[derive(Parser, Debug)]
-#[clap(version = youki_version!(), author = env!("CARGO_PKG_AUTHORS"))]
+#[clap(author = env!("CARGO_PKG_AUTHORS"))]
+#[command(version, disable_version_flag = true)]
 struct Opts {
     #[clap(flatten)]
     global: GlobalOpts,
@@ -53,7 +38,11 @@ struct Opts {
     youki_extend: YoukiExtendOpts,
 
     #[clap(subcommand)]
-    subcmd: SubCommand,
+    subcmd: Option<SubCommand>,
+
+    /// Display youki version and commit hash
+    #[clap(short, long)]
+    version: bool,
 }
 
 // Subcommands accepted by Youki, confirming with [OCI runtime-spec](https://github.com/opencontainers/runtime-spec/blob/master/runtime.md)
@@ -87,7 +76,13 @@ fn main() -> Result<()> {
     pentacle::ensure_sealed().context("failed to seal /proc/self/exe")?;
 
     let opts = Opts::parse();
+    if opts.version {
+        info::print_youki();
+        return Ok(());
+    }
+
     let mut app = Opts::command();
+    let syscall = create_syscall();
 
     observability::init(&opts).map_err(|err| {
         eprintln!("failed to initialize observability: {}", err);
@@ -96,14 +91,15 @@ fn main() -> Result<()> {
 
     tracing::debug!(
         "started by user {} with {:?}",
-        nix::unistd::geteuid(),
+        syscall.get_euid(),
         std::env::args_os()
     );
-    let root_path = rootpath::determine(opts.global.root)?;
+
+    let root_path = rootpath::determine(opts.global.root, &*syscall)?;
     let systemd_cgroup = opts.global.systemd_cgroup;
 
     let cmd_result = match opts.subcmd {
-        SubCommand::Standard(cmd) => match *cmd {
+        Some(SubCommand::Standard(cmd)) => match *cmd {
             StandardCmd::Create(create) => {
                 commands::create::create(create, root_path, systemd_cgroup)
             }
@@ -112,7 +108,7 @@ fn main() -> Result<()> {
             StandardCmd::Delete(delete) => commands::delete::delete(delete, root_path),
             StandardCmd::State(state) => commands::state::state(state, root_path),
         },
-        SubCommand::Common(cmd) => match *cmd {
+        Some(SubCommand::Common(cmd)) => match *cmd {
             CommonCmd::Checkpointt(checkpoint) => {
                 commands::checkpoint::checkpoint(checkpoint, root_path)
             }
@@ -121,7 +117,6 @@ fn main() -> Result<()> {
                 Ok(exit_code) => std::process::exit(exit_code),
                 Err(e) => {
                     tracing::error!("error in executing command: {:?}", e);
-                    eprintln!("exec failed : {e}");
                     std::process::exit(-1);
                 }
             },
@@ -134,23 +129,24 @@ fn main() -> Result<()> {
                 Ok(exit_code) => std::process::exit(exit_code),
                 Err(e) => {
                     tracing::error!("error in executing command: {:?}", e);
-                    eprintln!("run failed : {e}");
                     std::process::exit(-1);
                 }
             },
-            CommonCmd::Spec(spec) => commands::spec_json::spec(spec),
+            CommonCmd::Spec(spec) => commands::spec_json::spec(spec, &*syscall),
             CommonCmd::Update(update) => commands::update::update(update, root_path),
         },
 
-        SubCommand::Info(info) => commands::info::info(info),
-        SubCommand::Completion(completion) => {
+        Some(SubCommand::Info(info)) => commands::info::info(info),
+        Some(SubCommand::Completion(completion)) => {
             commands::completion::completion(completion, &mut app)
         }
+        None => app
+            .print_help()
+            .map_err(|e| anyhow::anyhow!("failed to print help: {e}")),
     };
 
     if let Err(ref e) = cmd_result {
         tracing::error!("error in executing command: {:?}", e);
-        eprintln!("error in executing command: {:?}", e);
     }
     cmd_result
 }

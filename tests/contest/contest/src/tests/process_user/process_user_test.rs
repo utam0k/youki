@@ -1,7 +1,7 @@
-use anyhow::{anyhow, Context, Ok, Result};
+use anyhow::{Context, Ok, Result};
 use oci_spec::runtime::{ProcessBuilder, Spec, SpecBuilder, UserBuilder};
-use rand::Rng;
-use test_framework::{test_result, Test, TestGroup, TestResult};
+use rand::RngExt;
+use test_framework::{Test, TestGroup, TestResult, test_result};
 
 use crate::utils::test_inside_container;
 use crate::utils::test_utils::CreateOptions;
@@ -54,12 +54,7 @@ fn process_user_test_duplicate_gids() -> TestResult {
     let duplicate = gids[0];
     gids.push(duplicate);
     let spec = test_result!(create_spec(gids));
-    match test_inside_container(&spec, &CreateOptions::default(), &|_| Ok(())) {
-        TestResult::Passed => TestResult::Failed(anyhow!(
-            "expected test with duplicate gids to fail, but it passed instead"
-        )),
-        _ => TestResult::Passed,
-    }
+    test_inside_container(&spec, &CreateOptions::default(), &|_| Ok(()))
 }
 
 pub fn get_process_user_test() -> TestGroup {
