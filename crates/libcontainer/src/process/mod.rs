@@ -13,3 +13,4 @@ pub mod memory_policy;
 mod message;
 #[cfg(feature = "libseccomp")]
 mod seccomp_listener;
+pub mod user_namespaces;

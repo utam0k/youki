@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::io::{Read, Write};
 use std::os::unix::prelude::{AsRawFd, FromRawFd, OwnedFd, RawFd};
 
 use nix::unistd::Pid;
@@ -28,6 +29,10 @@ pub enum ChannelError {
     MissingSeccompFds,
     #[error("exec process failed with error {0}")]
     ExecError(String),
+    #[error("missing fd from exec error")]
+    MissingExecErrorFd,
+    #[error("failed to transfer exec error: {0}")]
+    ExecErrorIo(#[source] std::io::Error),
     #[error("intermediate process error {0}")]
     OtherError(String),
     #[error("missing fd from mount request")]
@@ -122,7 +127,22 @@ impl MainSender {
     }
 
     pub fn exec_failed(&mut self, err: String) -> Result<(), ChannelError> {
-        self.sender.send(Message::ExecFailed(err))?;
+        // Keep small errors inline. Hook output can exceed the maximum packet
+        // size of our SOCK_SEQPACKET channel, especially after JSON escaping.
+        if err.len() <= 4096 {
+            self.sender.send(Message::ExecFailed(err))?;
+        } else {
+            let (read, write) = nix::unistd::pipe2(nix::fcntl::OFlag::O_CLOEXEC)
+                .map_err(|err| ChannelError::ExecErrorIo(err.into()))?;
+            self.sender
+                .send_fds(Message::ExecFailedFd, &[read.as_raw_fd()])?;
+            drop(read);
+            // The parent receives the read end before we write, so it can drain
+            // errors larger than the pipe capacity while we send them.
+            std::fs::File::from(write)
+                .write_all(err.as_bytes())
+                .map_err(ChannelError::ExecErrorIo)?;
+        }
         Ok(())
     }
 
@@ -148,16 +168,30 @@ pub struct MainReceiver {
 }
 
 impl MainReceiver {
+    fn recv_message(&mut self, context: &str) -> Result<(Message, Option<OwnedFd>), ChannelError> {
+        let (msg, fds) = self.receiver.recv_with_fds::<[RawFd; 1]>().map_err(|err| {
+            ChannelError::ReceiveError {
+                msg: context.to_string(),
+                source: err,
+            }
+        })?;
+        // SAFETY: SCM_RIGHTS transferred ownership of this fresh descriptor.
+        let fd = fds.map(|fds| unsafe { OwnedFd::from_raw_fd(fds[0]) });
+        if matches!(msg, Message::ExecFailedFd) {
+            let fd = fd.ok_or(ChannelError::MissingExecErrorFd)?;
+            let mut error = String::new();
+            std::fs::File::from(fd)
+                .read_to_string(&mut error)
+                .map_err(ChannelError::ExecErrorIo)?;
+            return Ok((Message::ExecFailed(error), None));
+        }
+        Ok((msg, fd))
+    }
+
     /// Waits for associated intermediate process to send ready message
     /// and return the pid of init process which is forked by intermediate process
     pub fn wait_for_intermediate_ready(&mut self) -> Result<Pid, ChannelError> {
-        let msg = self
-            .receiver
-            .recv()
-            .map_err(|err| ChannelError::ReceiveError {
-                msg: "waiting for intermediate process".to_string(),
-                source: err,
-            })?;
+        let (msg, _fd) = self.recv_message("waiting for intermediate process")?;
 
         match msg {
             Message::IntermediateReady(pid) => Ok(Pid::from_raw(pid)),
@@ -199,13 +233,7 @@ impl MainReceiver {
     /// Receives an init message, normalizing error messages and taking ownership of
     /// any attached fd.
     pub fn recv_init_message(&mut self) -> Result<(Message, Option<OwnedFd>), ChannelError> {
-        let (msg, fds) = self.receiver.recv_with_fds::<[RawFd; 1]>().map_err(|err| {
-            ChannelError::ReceiveError {
-                msg: "waiting for init message".to_string(),
-                source: err,
-            }
-        })?;
-        let fd = fds.map(|fds| unsafe { OwnedFd::from_raw_fd(fds[0]) });
+        let (msg, fd) = self.recv_message("waiting for init message")?;
         match msg {
             Message::ExecFailed(err) => Err(ChannelError::ExecError(err)),
             Message::OtherError(err) => Err(ChannelError::OtherError(err)),
@@ -271,18 +299,9 @@ impl MainReceiver {
     /// Returns the PTY master fd when the init process allocated a foreground
     /// terminal (process.terminal=true without a console socket).
     pub fn wait_for_init_ready(&mut self) -> Result<Option<OwnedFd>, ChannelError> {
-        let (msg, fds) = self.receiver.recv_with_fds::<[RawFd; 1]>().map_err(|err| {
-            ChannelError::ReceiveError {
-                msg: "waiting for init ready".to_string(),
-                source: err,
-            }
-        })?;
+        let (msg, fd) = self.recv_message("waiting for init ready")?;
         match msg {
-            // SAFETY: the fd (if any) was just received via SCM_RIGHTS with
-            // MSG_CMSG_CLOEXEC, so it is a fresh fd that we own.
-            Message::InitReady => Ok(fds
-                .and_then(|f| f.first().copied())
-                .map(|fd| unsafe { OwnedFd::from_raw_fd(fd) })),
+            Message::InitReady => Ok(fd),
             // this case in unique and known enough to have a special error format
             Message::ExecFailed(err) => Err(ChannelError::ExecError(format!(
                 "error in executing process : {err}"
@@ -876,6 +895,36 @@ mod tests {
         assert!(matches!(err, ChannelError::ExecError(msg) if msg == "boom"));
         sender.close()?;
         receiver.close()?;
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_large_exec_failed_output() -> Result<()> {
+        // Larger than a SOCK_SEQPACKET message, including JSON-escaped bytes.
+        let diagnostic = format!("{}END_OF_HOOK_OUTPUT", "\0\nstdout/stderr".repeat(32768));
+        for receive in [
+            |r: &mut MainReceiver| r.recv_init_message().unwrap_err(),
+            |r: &mut MainReceiver| r.wait_for_init_ready().unwrap_err(),
+            |r: &mut MainReceiver| r.wait_for_intermediate_ready().unwrap_err(),
+        ] {
+            let (mut sender, mut receiver) = main_channel()?;
+            let sent = diagnostic.clone();
+            let writer = std::thread::spawn(move || {
+                let result = sender.exec_failed(sent);
+                sender.close().unwrap();
+                result
+            });
+            let error = receive(&mut receiver);
+            let sent = writer.join().unwrap();
+            receiver.close()?;
+            sent?;
+            assert!(
+                matches!(error, ChannelError::ExecError(ref message)
+                if message.ends_with(&diagnostic)),
+                "{error}"
+            );
+        }
         Ok(())
     }
 

@@ -14,6 +14,8 @@ use nix::sys::wait::{WaitPidFlag, WaitStatus, waitpid};
 use nix::unistd::Pid;
 use nix::{libc, unistd};
 
+use crate::commands::stdio::HostStdio;
+
 struct RawTerminalGuard {
     original: Termios,
 }
@@ -99,8 +101,8 @@ fn io_bridge(master: OwnedFd) -> Result<OutputRelay> {
     })
 }
 
-// Relay PTY output until the master closes or the owning foreground process requests shutdown.
-fn relay_output(master: &mut File, out: &mut File, stop: &EventFd) -> io::Result<()> {
+// Relay pipe or PTY output until the source closes or foreground shutdown is requested.
+pub(super) fn relay_output(master: &mut File, out: &mut File, stop: &EventFd) -> io::Result<()> {
     let mut buffer = [0_u8; 8192];
 
     loop {
@@ -223,8 +225,12 @@ fn setup_console_bridge(master: Option<OwnedFd>) -> Result<Option<ConsoleBridge>
 // The youki main process will wait and reap the container init process. The
 // youki main process also forwards most of the signals to the container init
 // process.
-#[tracing::instrument(level = "trace")]
-pub(crate) fn handle_foreground(init_pid: Pid, foreground_pty_fd: Option<OwnedFd>) -> Result<i32> {
+#[tracing::instrument(level = "trace", skip(host_stdio))]
+pub(crate) fn handle_foreground(
+    init_pid: Pid,
+    foreground_pty_fd: Option<OwnedFd>,
+    host_stdio: Option<HostStdio>,
+) -> Result<i32> {
     tracing::trace!("waiting for container init process to exit");
 
     // We mask all signals here and forward most of the signals to the container
@@ -233,6 +239,12 @@ pub(crate) fn handle_foreground(init_pid: Pid, foreground_pty_fd: Option<OwnedFd
     signal_set
         .thread_block()
         .with_context(|| "failed to call pthread_sigmask")?;
+
+    // Start the stdio relay if host_stdio is provided.
+    let _stdio_relay = match host_stdio {
+        Some(stdio) => Some(stdio.start()?),
+        None => None,
+    };
 
     // With a PTY master, raw-mode the host terminal (restored on drop) and bridge stdio.
     let console = setup_console_bridge(foreground_pty_fd)?;
@@ -360,7 +372,7 @@ mod tests {
                 match unsafe { unistd::fork()? } {
                     unistd::ForkResult::Parent { child } => {
                         // Inside P1.
-                        let _ = handle_foreground(child, None).map_err(|err| {
+                        let _ = handle_foreground(child, None, None).map_err(|err| {
                             // Since we are in a child process, we want to use trace to log the error.
                             let _ = tracing_subscriber::fmt()
                                 .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
@@ -417,7 +429,7 @@ mod tests {
                 match unsafe { unistd::fork() } {
                     Ok(unistd::ForkResult::Parent { child }) => {
                         std::thread::sleep(Duration::from_millis(500));
-                        let code = match handle_foreground(child, None) {
+                        let code = match handle_foreground(child, None, None) {
                             Ok(_) => 0,
                             Err(_) => 1,
                         };
@@ -450,7 +462,7 @@ mod tests {
                 match unsafe { unistd::fork()? } {
                     unistd::ForkResult::Parent { child } => {
                         // Inside P1.
-                        handle_foreground(child, None)?;
+                        handle_foreground(child, None, None)?;
                         wait::waitpid(child, None)?;
                     }
                     unistd::ForkResult::Child => {

@@ -413,6 +413,7 @@ fn handle_hook_request(
     if let Some(container) = container {
         hooks::run_hooks(
             hooks.prestart().as_ref(),
+            hooks::HookKind::Prestart,
             Some(&container.state),
             None,
             Some(init_pid),
@@ -425,6 +426,7 @@ fn handle_hook_request(
 
         hooks::run_hooks(
             hooks.create_runtime().as_ref(),
+            hooks::HookKind::CreateRuntime,
             Some(&container.state),
             None,
             Some(init_pid),

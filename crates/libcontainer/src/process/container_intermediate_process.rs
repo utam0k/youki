@@ -178,7 +178,11 @@ pub fn container_intermediate_process(
             match init_process::container_init_process(args, init_main_sender, init_receiver) {
                 Ok(_) => 0,
                 Err(e) => {
-                    tracing::error!("failed to initialize container process: {e}");
+                    // Hook diagnostics go to the parent. Logging captured output
+                    // here could fill workload stderr before its relay starts.
+                    if !matches!(e, crate::process::init::error::InitProcessError::Hooks(_)) {
+                        tracing::error!("failed to initialize container process: {e}");
+                    }
                     if let Err(err) = init_main_sender.exec_failed(e.to_string()) {
                         tracing::error!(?err, "failed sending error to main sender");
                     }

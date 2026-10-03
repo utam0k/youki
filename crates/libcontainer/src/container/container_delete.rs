@@ -101,6 +101,7 @@ impl Container {
                     if let Some(hooks) = config.hooks.as_ref() {
                         hooks::run_hooks(
                             hooks.poststop().as_ref(),
+                            hooks::HookKind::Poststop,
                             Some(&self.state),
                             None,
                             None,

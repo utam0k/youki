@@ -105,9 +105,9 @@ runc exec --user vs /dev/null ownership
 [skip]runc -h
 [skip]runc command -h
 [skip]runc foo -h
-[skip]runc create [second createRuntime hook fails]
-[skip]runc create [hook fails]
-[skip]runc run [hook fails]
+[skip]runc create [second createRuntime hook fails] # youki spec defaults to terminal=false, so create --console-socket is rejected
+[skip]runc create [hook fails] # youki spec defaults to terminal=false, so create --console-socket is rejected
+runc run [hook fails]
 [skip]runc run [startContainer hook should inherit process environment]
 runc run [hook's argv is preserved]
 [skip]runc run (hooks library tests)
@@ -179,10 +179,10 @@ runc pause and resume with nonexist container
 [skip]runc run personality with exec for i686
 runc run personality for x86_64
 [skip]runc run personality with exec for x86_64
-[skip]runc create [ --pidfd-socket ] 
-[skip]runc run [ --pidfd-socket ] 
+[skip]runc create [ --pidfd-socket ]
+[skip]runc run [ --pidfd-socket ]
 [skip]runc exec [ --pidfd-socket ] [cgroups_v1]  # skip test requires cgroups_v1
-[skip]runc exec [ --pidfd-socket ] [cgroups_v2] 
+[skip]runc exec [ --pidfd-socket ] [cgroups_v2]
 ps
 ps -f json
 [skip]ps -e -x

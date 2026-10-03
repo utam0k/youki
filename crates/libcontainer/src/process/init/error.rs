@@ -30,7 +30,7 @@ pub enum InitProcessError {
     MissingSpec(#[from] crate::error::MissingSpecError),
     #[error("failed to setup tty")]
     Tty(#[source] tty::TTYError),
-    #[error("failed to run hooks")]
+    #[error("failed to run hooks: {0}")]
     Hooks(#[from] hooks::HookError),
     #[error("failed to prepare rootfs")]
     RootFS(#[source] rootfs::RootfsError),

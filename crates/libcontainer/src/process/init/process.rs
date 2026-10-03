@@ -107,15 +107,13 @@ pub fn container_init_process(
             // before pivot_root is called. This runs in the container namespaces.
             hooks::run_hooks(
                 hooks.create_container().as_ref(),
+                hooks::HookKind::CreateContainer,
                 ctx.container.map(|c| &c.state),
                 None,
                 None,
                 None,
             )
-            .map_err(|err| {
-                tracing::error!(?err, "failed to run create container hooks");
-                InitProcessError::Hooks(err)
-            })?;
+            .map_err(InitProcessError::Hooks)?;
         }
 
         // Entering into the rootfs jail. If mount namespace is specified, then
@@ -476,13 +474,14 @@ pub fn container_init_process(
         if let Some(hooks) = ctx.hooks {
             hooks::run_hooks(
                 hooks.start_container().as_ref(),
+                hooks::HookKind::StartContainer,
                 ctx.container.map(|c| &c.state),
                 None,
                 None,
                 Some(&start_container_env),
             )
             .map_err(|err| {
-                tracing::error!(?err, "failed to run start container hooks");
+                tracing::error!("failed to run start container hooks: {err}");
                 err
             })?;
         }

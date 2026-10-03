@@ -3,11 +3,12 @@ use std::io::Write;
 use std::os::unix::net::UnixListener;
 use std::time::Duration;
 
-use anyhow::anyhow;
+use anyhow::{Context, anyhow};
 use nix::sys::signal::{Signal, kill};
 use nix::sys::termios::{self, LocalFlags};
 use nix::unistd::Pid;
-use test_framework::TestResult;
+use oci_spec::runtime::{ProcessBuilder, SpecBuilder};
+use test_framework::{TestResult, test_result};
 
 use super::{
     console_size_spec, drain_master, poll_size_script, read_master_for, recv_pty_master,
@@ -16,8 +17,66 @@ use super::{
 };
 use crate::utils::{generate_uuid, prepare_bundle, set_config};
 
+pub(crate) fn terminal_false_stdio_pipes_test() -> TestResult {
+    let id = generate_uuid().to_string();
+    let bundle = test_result!(prepare_bundle());
+    let spec = test_result!(
+        SpecBuilder::default()
+            .process(test_result!(
+                ProcessBuilder::default()
+                    .terminal(false)
+                    .args(vec![
+                        "sh".to_string(),
+                        "-c".to_string(),
+                        "for fd in 0 1 2; do \
+                         if [ -p /proc/self/fd/$fd ]; then echo FD$fd=PIPE; \
+                         elif [ -t $fd ]; then echo FD$fd=TTY; \
+                         else echo FD$fd=OTHER; fi; done"
+                            .to_string(),
+                    ])
+                    .build()
+                    .context("failed to build process config")
+            ))
+            .build()
+            .context("failed to build spec")
+    );
+    test_result!(set_config(&bundle, &spec));
+
+    let pty = test_result!(sized_pty(24, 80).context("failed to open host pty"));
+    let mut child = test_result!(
+        spawn_on_pty(run_command(bundle.as_ref(), &id), pty.slave)
+            .context("failed to spawn container")
+    );
+    let reader = std::thread::spawn(move || read_master_for(pty.master, Duration::from_secs(30)));
+    let status = wait_timeout(&mut child, Duration::from_secs(30));
+    // Also clean up a container left behind by a failed or timed-out run.
+    let _ = runtime_command(bundle.as_ref(), "delete")
+        .arg("--force")
+        .arg(&id)
+        .output();
+    let output = match reader.join() {
+        Ok(output) => output,
+        Err(_) => return TestResult::Failed(anyhow!("host pty reader panicked")),
+    };
+    let status = test_result!(status.context("failed to wait for container"));
+    if !status.success() {
+        return TestResult::Failed(anyhow!(
+            "container failed: status={status:?}, output={output:?}"
+        ));
+    }
+
+    for fd in 0..=2 {
+        if !saw_line(&output, &format!("FD{fd}=PIPE")) {
+            return TestResult::Failed(anyhow!(
+                "foreground terminal=false must provide a pipe for fd {fd}, output={output:?}"
+            ));
+        }
+    }
+    TestResult::Passed
+}
+
 // process.terminal=true + no console socket => the container gets a real tty.
-// Every foreground test brings its own host pty: runc refuses to run a
+// Foreground terminal tests bring their own host pty: runc refuses to run a
 // foreground terminal container when the caller has no terminal at all.
 pub(crate) fn terminal_no_console_socket_test() -> TestResult {
     let id = generate_uuid().to_string();
