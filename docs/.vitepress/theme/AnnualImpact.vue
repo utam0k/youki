@@ -21,7 +21,7 @@ const isExample = computed(() =>
 
 function duration(seconds: number) {
   const magnitude = Math.abs(seconds)
-  const [value, unit] = magnitude >= 3600 ? [magnitude / 3600, 'hour'] :
+  const [value, unit]: [number, string] = magnitude >= 3600 ? [magnitude / 3600, 'hour'] :
     magnitude >= 60 ? [magnitude / 60, 'minute'] :
     magnitude >= 1 || magnitude === 0 ? [magnitude, 'second'] : [magnitude * 1000, 'millisecond']
   const formatted = number.format(value)

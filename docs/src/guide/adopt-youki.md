@@ -5,18 +5,17 @@ Add youki to your existing container workflow. Keep your current default runtime
 youki implements the OCI Runtime Specification. Your image and application can stay the same; you change the low-level runtime selected by Docker, Podman or containerd.
 Runtime-specific flags, generated defaults and host integration still need to be checked.
 
-## 1. Install alongside runc
+## 1. Install alongside your current runtime
 
 [Install a youki release](../user/basic_setup.md) on a Linux host.
-Use a distinct executable path such as `/usr/local/bin/youki`; keep the existing `runc` executable and runtime configuration.
+Use a distinct executable path such as `/usr/local/bin/youki`; keep your existing runtime executable and configuration.
 
 ~~~sh
 /usr/local/bin/youki --version
 /usr/local/bin/youki info
-runc --version
 ~~~
 
-Record versions and the host's cgroup configuration so comparisons are useful.
+Record your current runtime's version and the host's cgroup configuration so comparisons are useful.
 
 ## 2. Select it for one workload
 
@@ -27,10 +26,9 @@ Record versions and the host's cgroup configuration so comparisons are useful.
 | Kubernetes / containerd | Configure a runtime handler and use `runtimeClassName: youki` | [Kubernetes](../user/kubernetes.md) |
 | Your own Rust platform | Use `ContainerBuilder` and an `Executor` | [libcontainer](./custom-runtime.md) |
 
-For a local Podman comparison:
+For a local Podman trial:
 
 ~~~sh
-podman run --rm --runtime runc docker.io/library/alpine:3.21 echo hello
 podman run --rm --runtime /usr/local/bin/youki docker.io/library/alpine:3.21 echo hello
 ~~~
 
@@ -59,9 +57,9 @@ Switch a default only after those workloads meet your behavior and performance r
 
 ## Returning to your previous runtime
 
-For Docker, recreate the test container with `--runtime runc`.
-For Podman, select `--runtime runc` or your previous runtime path.
-For Kubernetes, recreate the workload using your previous RuntimeClass, or omit `runtimeClassName` when runc is the cluster default.
+For Docker, recreate the test container with your previous runtime name.
+For Podman, select your previous runtime name or executable path. For example, `--runtime runc` selects runc when it is installed.
+For Kubernetes, recreate the workload using your previous RuntimeClass, or omit `runtimeClassName` to use the cluster default.
 
 A running container cannot change runtime in place. Keep the original runtime configuration until all youki-managed workloads are stopped and cleaned up.
 
