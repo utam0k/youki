@@ -38,8 +38,11 @@ jobs:
       - name: Install documentation dependencies
         run: npm install --ignore-scripts
       - name: Capture the initial lockfile
-        if: hashFiles('docs/package-lock.json') == ''
         run: node -e "console.log('DOCS_LOCKFILE_BASE64=' + require('node:fs').readFileSync('package-lock.json').toString('base64'))"
+      - name: Inspect dependency audit
+        run: npm audit --json > npm-audit.json || true
+      - name: Retain dependency audit
+        run: node -e "console.log('DOCS_AUDIT_BASE64=' + require('node:fs').readFileSync('npm-audit.json').toString('base64'))"
       - name: Check release updater syntax
         working-directory: .
         run: bash -n scripts/release_tag.sh
