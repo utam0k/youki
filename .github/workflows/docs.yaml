@@ -50,6 +50,18 @@ jobs:
         run: npm run build
       - name: Check generated links and anchors
         run: npm run check:links
+      - name: Install browser for visual verification
+        run: npx --yes playwright@1.56.1 install --with-deps chromium
+      - name: Capture desktop and mobile previews
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/docs-preview.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/youki/ > /dev/null; then break; fi
+            sleep 1
+          done
+          npx --yes playwright@1.56.1 screenshot --full-page --viewport-size="1440,1000" --wait-for-timeout=1500 http://127.0.0.1:4173/youki/ /tmp/docs-desktop.jpg
+          npx --yes playwright@1.56.1 screenshot --full-page --viewport-size="390,844" --wait-for-timeout=1500 http://127.0.0.1:4173/youki/ /tmp/docs-mobile.jpg
+          node -e "for (const name of ['desktop', 'mobile']) console.log('DOCS_PREVIEW_' + name.toUpperCase() + '=' + require('node:fs').readFileSync('/tmp/docs-' + name + '.jpg').toString('base64'))"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/.vitepress/dist

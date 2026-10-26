@@ -1,7 +1,7 @@
 # Using youki as a Kubernetes runtime
 
-youki implements the OCI runtime spec, so it can be plugged into any
-Kubernetes cluster. Once youki is installed on each node and the
+youki implements the OCI runtime spec and can be used with Kubernetes through
+an appropriately configured containerd runtime handler. Once youki is installed on each node and the
 node's container runtime is configured to know about it, individual
 Pods can opt in via `runtimeClassName: youki`.
 
