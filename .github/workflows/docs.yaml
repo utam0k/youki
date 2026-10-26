@@ -25,6 +25,8 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    env:
+      DOCS_BRANCH: ${{ github.head_ref || github.ref_name }}
     defaults:
       run:
         working-directory: docs
@@ -35,14 +37,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
       - name: Install documentation dependencies
-        run: npm install --ignore-scripts
-      - name: Capture the initial lockfile
-        run: node -e "console.log('DOCS_LOCKFILE_BASE64=' + require('node:fs').readFileSync('package-lock.json').toString('base64'))"
-      - name: Inspect dependency audit
-        run: npm audit --json > npm-audit.json || true
-      - name: Retain dependency audit
-        run: node -e "console.log('DOCS_AUDIT_BASE64=' + require('node:fs').readFileSync('npm-audit.json').toString('base64'))"
+        run: npm ci --ignore-scripts
       - name: Check release updater syntax
         working-directory: .
         run: bash -n scripts/release_tag.sh
@@ -50,26 +48,9 @@ jobs:
         run: npm run build
       - name: Check generated links and anchors
         run: npm run check:links
-      - name: Install browser for visual verification
-        run: npx --yes playwright@1.56.1 install --with-deps chromium
-      - name: Capture desktop and mobile previews
-        run: |
-          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/docs-preview.log 2>&1 &
-          for attempt in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:4173/youki/ > /dev/null; then break; fi
-            sleep 1
-          done
-          npx --yes playwright@1.56.1 screenshot --full-page --viewport-size="1440,1000" --wait-for-timeout=1500 http://127.0.0.1:4173/youki/ /tmp/docs-desktop.jpg
-          npx --yes playwright@1.56.1 screenshot --full-page --viewport-size="390,844" --wait-for-timeout=1500 http://127.0.0.1:4173/youki/ /tmp/docs-mobile.jpg
-          node -e "for (const name of ['desktop', 'mobile']) console.log('DOCS_PREVIEW_' + name.toUpperCase() + '=' + require('node:fs').readFileSync('/tmp/docs-' + name + '.jpg').toString('base64'))"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/.vitepress/dist
-      - name: Retain lockfile
-        uses: actions/upload-artifact@v4
-        with:
-          name: docs-package-lock
-          path: docs/package-lock.json
 
   deploy:
     if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.repository == 'utam0k/youki')
