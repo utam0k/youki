@@ -124,11 +124,11 @@ fn main() -> Result<()> {
         eprintln!("logger could not be initialized: {e:?}");
     }
 
-    ////////// ANCHOR: register_example_test
+    // #region register_example_test
     let mut tm = TestManager::new();
     let example = get_example_test();
     tm.add_test_group(Box::new(example));
-    ////////// ANCHOR_END: register_example_test
+    // #endregion register_example_test
 
     let cl = ContainerLifecycle::new();
     let cc = ContainerCreate::new();

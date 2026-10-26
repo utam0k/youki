@@ -5,7 +5,7 @@ use test_framework::{Test, TestGroup, TestResult, test_result};
 use crate::utils::test_inside_container;
 use crate::utils::test_utils::CreateOptions;
 
-////////// ANCHOR: get_example_spec
+// #region get_example_spec
 fn create_spec() -> Result<Spec> {
     SpecBuilder::default()
         .process(
@@ -21,16 +21,16 @@ fn create_spec() -> Result<Spec> {
         .build()
         .context("failed to create spec")
 }
-////////// ANCHOR_END: get_example_spec
+// #endregion get_example_spec
 
-////////// ANCHOR: example_test
+// #region example_test
 fn example_test() -> TestResult {
     let spec = test_result!(create_spec());
     test_inside_container(&spec, &CreateOptions::default(), &|_| Ok(()))
 }
-////////// ANCHOR_END: example_test
+// #endregion example_test
 
-////////// ANCHOR: get_example_test
+// #region get_example_test
 pub fn get_example_test() -> TestGroup {
     let mut test_group = TestGroup::new("example");
     let test1 = Test::new("hello world", Box::new(example_test));
@@ -38,4 +38,4 @@ pub fn get_example_test() -> TestGroup {
 
     test_group
 }
-////////// ANCHOR_END: get_example_test
+// #endregion get_example_test

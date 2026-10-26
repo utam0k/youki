@@ -1,42 +1,73 @@
-name: 📓 Deploy the documentation
+name: Documentation
 
 on:
   push:
-    branches:
-      - main
+    branches: [main, docs/vitepress]
+    paths:
+      - "docs/**"
+      - "tests/contest/**"
+      - ".github/workflows/docs.yaml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "tests/contest/**"
+      - ".github/workflows/docs.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  changes:
+  build:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    outputs:
-      dirs: ${{ steps.filter.outputs.changes }}
+    defaults:
+      run:
+        working-directory: docs
     steps:
       - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v2
-        id: filter
         with:
-          filters: |
-            docs: docs/**
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install documentation dependencies
+        run: npm install --ignore-scripts
+      - name: Capture the initial lockfile
+        if: hashFiles('docs/package-lock.json') == ''
+        run: node -e "console.log('DOCS_LOCKFILE_BASE64=' + require('node:fs').readFileSync('package-lock.json').toString('base64'))"
+      - name: Check release updater syntax
+        working-directory: .
+        run: bash -n scripts/release_tag.sh
+      - name: Build documentation
+        run: npm run build
+      - name: Check generated links and anchors
+        run: npm run check:links
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/.vitepress/dist
+      - name: Retain lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-package-lock
+          path: docs/package-lock.json
+
   deploy:
-    needs: [changes]
-    if: ${{ !contains(needs.changes.outputs.dirs, '[]') }}
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.repository == 'utam0k/youki')
+    needs: build
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup mdBook
-        uses: peaceiris/actions-mdbook@v1
-        with:
-          mdbook-version: "latest"
-      - name: Build mdbook
-        working-directory: ./docs
-        run: mdbook build
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        if: ${{ github.ref == 'refs/heads/main' }}
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/book
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -2,6 +2,9 @@
 
 This crate provides functionality for creating and managing containers. Youki itself uses this crate to manage and control the containers.
 
+For an application-oriented introduction and the custom `Executor` extension point, see [Build your own runtime with libcontainer](../guide/custom-runtime.md).
+[runwasi, SpinKube and rk8s](../community/adopters_and_use_cases.md) are public examples of platforms using this library.
+
 This exposes several modules, each dealing with a specific aspect of working with containers.
 
 - `apparmor` : functions that deal with apparmor, which is a Linux Kernel security module to control program capabilities with per program profiles.

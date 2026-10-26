@@ -12,9 +12,7 @@ START_MARKER="<!--youki release begin-->"
 END_MARKER="<!--youki release end-->"
 
 
-echo "\`\`\`console
-# curl -sSfL https://github.com/youki-dev/youki/releases/download/v${VERSION}/youki-${VERSION}-\$(uname -m)-musl.tar.gz | tar -xzvC /usr/bin/ youki
-\`\`\`" > replace_content.txt
+printf '~~~sh\nYOUKI_VERSION="%s"\n~~~\n' "$VERSION" > replace_content.txt
 
 awk -v start="$START_MARKER" -v end="$END_MARKER" -v newfile="replace_content.txt" '
 BEGIN {printing=1}

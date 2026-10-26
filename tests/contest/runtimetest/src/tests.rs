@@ -34,11 +34,11 @@ use crate::utils::{
     self, test_dir_read_access, test_dir_write_access, test_read_access, test_write_access,
 };
 
-////////// ANCHOR: example_hello_world
+// #region example_hello_world
 pub fn hello_world(_spec: &Spec) {
     println!("Hello world");
 }
-////////// ANCHOR_END: example_hello_world
+// #endregion example_hello_world
 
 pub fn validate_readonly_paths(spec: &Spec) {
     let linux = spec.linux().as_ref().unwrap();

@@ -1,183 +1,76 @@
-# Basic Usage
+# Run an OCI container directly
 
-This explains using Youki as a low-level container runtime. Youki can be used by itself to create, start and run containers, but doing so can be tedious, and thus you might want to use a higher-level runtime with Youki set as its runtime, so that you can get a convenient and easy interface.
+Use the youki CLI when you want to work with an OCI bundle rather than a container engine.
+For image pulls, networking and everyday container management, start with [Docker](../guide/docker.md) or [Podman](../guide/podman.md).
 
-You can use Youki with Docker, or Podman, but for the purpose of the examples, we will illustrate using Docker.
+## Prepare a bundle
 
-Youki can run in two modes, namely rootful mode, and rootless mode. The primary difference from the user-perspective in these is that as the name suggests, rootless mode does not require root/admin permissions, while rootful mode needs the root permissions. Both of these are shown in the examples below.
+An OCI bundle contains a root filesystem and `config.json`.
+This example uses Docker to export a BusyBox root filesystem, and Python 3 to edit the JSON.
 
-#### Using youki with a high-level runtime
-
-We will first see how to use Youki with a high-level runtime such as Docker. You can install Docker from [here](https://docs.docker.com/engine/install/).
-
-By default, after installation the docker sets up so that its daemon process will start running in background after booting up. By default, this configures Docker to use its default low-level runtime, and to use Youki instead , we will first need to stop the running Docker daemon.
-
-As Youki needs systemd to compile, this assumes that you are running on a systemd based system. So you an first check if the docker daemon is running or not by running
-
-```console
-sudo systemctl status docker
-```
-
-This will print a message showing if the daemon is active or not. If it is active, then you will need to stop it by running
-
-```console
-sudo systemctl stop docker
-```
-
-After this you need to manually restart the docker daemon, but with Youki as its runtime. To do this, run following command in the youki/ directory after building youki
-
-```console
-dockerd --experimental --add-runtime="youki=$(pwd)/youki" # run in the youki/scripts directory
-```
-
-This will start the daemon and hang up the console. You can either start this as a background process to continue using the same terminal, or use another terminal, which will make it easier to stop the docker daemon later.
-
-In case you don't stop the original daemon, you can get an error message after previous command
-
-```console
-failed to start daemon: pid file found, ensure docker is not running or delete /var/run/docker.pid
-```
-
-Now that the docker daemon is running, you can use docker normally as you will, but you will be able to specify Youki as its low-level runtime to actually create, start and stop the containers.
-
-You can try running a container such as
-
-```console
-docker run -it --rm --runtime youki busybox   # run a container
-```
-
-This will start a busybox container, and give access to terminal inside it.
-
-After you are done, you can stop the docker daemon by sending it a signal, either by using `Ctrl` + `C` if you are running the process in another terminal, or by using kill command with the pid of it, if you have started it as a background process.
-
-Then to start the original/normal Docker daemon, you can run
-
-```console
-sudo systemctl start docker
-```
-
-#### Let docker permanently know youki as a runtime
-
-With newer versions of docker, you can update file `/etc/docker/daemon.json` to
-let docker know youki
-([source](https://docs.docker.com/engine/reference/commandline/dockerd/#on-linux)).
-You may need to create this file, if it does not yet exist. A sample content of it:
-
-```json
-{
-  "default-runtime": "runc",
-  "runtimes": {
-    "youki": {
-      "path": "/path/to/youki/youki",
-      "runtimeArgs": [
-          "--debug",
-          "--systemd-log"
-      ]
-    }
-  }
-}
-```
-
-After this (need to restart docker at the first time), you can use youki
-with docker: `docker run --runtime youki ...`. You can verify the runtime includes `youki`:
-
-```console
-$ docker info|grep -i runtime
- Runtimes: youki runc
- Default Runtime: runc
-```
-
-#### Using Youki Standalone
-
-Youki can also be used directly, without a higher-level runtime such as Docker to create, start, stop and delete the container, but the process can be tedious. Here we will show how you can do that, to run a simple container with desired program running in it.
-
-Note that we will still be using Docker to generate the rootfs required for running the container.
-
-To start, in the youki/scripts directory, make another directory named tutorial, and create a sub-directory rootfs inside it
-
-```console
+~~~sh
 mkdir -p tutorial/rootfs
-```
-
-After that, you will need to use docker to create the required directory structure
-
-```console
+container_id=$(docker create busybox:1.37)
+docker export "$container_id" | tar -C tutorial/rootfs -xf -
+docker rm "$container_id"
 cd tutorial
-docker export $(docker create busybox) | tar -C rootfs -xvf -
-```
+youki spec
+~~~
 
-This will create the required directory structure for using it as a root directory inside the container.
+Configure a process that runs long enough to inspect, with no attached terminal:
 
-Now the any container runtime gets the information about the permissions, configurations and constraints for the container process by using a config.json file. Youki has a command which can generate the default config for you. To do this, run
+~~~sh
+python3 - <<'PY'
+import json
+from pathlib import Path
 
-```console
-../youki spec
-```
+path = Path("config.json")
+spec = json.loads(path.read_text())
+spec["process"]["terminal"] = False
+spec["process"]["args"] = ["sleep", "30"]
+path.write_text(json.dumps(spec, indent=2) + "\n")
+PY
+~~~
 
-After this, you can manually edit the file to customize the behavior of the container process. For example, to run the desired program inside the container, you can edit the process.args
+## Create, start and inspect
 
-```json
-"process": {
-...
-"args": [
-  "sleep", "30"
-],
-...
- }
-```
+Run these commands from the `tutorial` directory:
 
-Here you can change the args to specify the program to be run, and arguments to be given to it.
+~~~sh
+sudo youki create --bundle . tutorial_container
+sudo youki state tutorial_container
+sudo youki start tutorial_container
+sudo youki list
+~~~
 
-After this, go back to the youki/ directory
+`create` prepares the container. `start` begins the configured process.
+After inspection, stop and remove the container:
 
-```console
-cd ..
-```
+~~~sh
+sudo youki delete --force tutorial_container
+~~~
 
-As the setup is complete, you can now use youki to create the container, start the container, get its state etc.
+For a benchmark bundle, change `process.args` to `["/bin/true"]` instead.
+See [measuring performance](../guide/performance.md).
 
-```console
-# create a container with name `tutorial_container`
-sudo ./youki create -b tutorial tutorial_container
+## Rootless containers
 
-# you can see the state the container is `created`
-sudo ./youki state tutorial_container
+Rootless operation needs a host configured for user namespaces, UID/GID mappings and cgroup delegation.
+Generate the corresponding OCI configuration with:
 
-# start the container
-sudo ./youki start tutorial_container
+~~~sh
+youki spec --rootless
+~~~
 
-# will show the list of containers, the container is `running`
-sudo ./youki list
+Set the desired process in `config.json`, then use `youki create`, `state`, `start`, `list` and `delete` without `sudo`.
+Use a new container ID and the same user for the entire lifecycle.
 
-# delete the container
-sudo ./youki delete tutorial_container
-```
+For a higher-level rootless workflow, see [Podman](../guide/podman.md).
 
-The example above shows how to run Youki in a 'rootful' way. To run it without root permissions, that is, in rootless mode, few changes are required.
+## Logging
 
-First, after exporting the rootfs from docker, while generating the config, you will need to pass the rootless flag. This will generate the config with the options needed for rootless operation of the container.
+Release builds default to the `error` log level; debug builds default to `debug`.
+Use the global `--log-level` option to select a level, such as `debug` or `trace`.
 
-```console
-../youki spec --rootless
-```
-
-After this, the steps are basically the same, except you do not need to use sudo while running youki.
-
-```console
-cd ..
-./youki create -b tutorial rootless_container
-./youki state rootless_container
-./youki start rootless_container
-./youki list
-./youki delete rootless_container
-```
-
-#### Log level
-
-`youki` defaults the log level to `error` in the release build. In the debug
-build, the log level defaults to `debug`. The `--log-level` flag can be used to
-set the log-level. For least amount of log, we recommend using the `error` log
-level. For the most spammy logging, we have a `trace` level.
-
-For compatibility with `runc` and `crun`, we have a `--debug` flag to set the
-log level to `debug`. This flag is ignored if `--log-level` is also set.
+The `--debug` flag is available for compatibility with runc and crun.
+An explicit `--log-level` takes precedence.

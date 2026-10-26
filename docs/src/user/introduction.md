@@ -1,15 +1,12 @@
-# User Documentation
+# Use youki
 
-This section provides documentation of youki and the sub crates that the youki repo contains for the users. So if you are using youki as a low level container runtime, or using any of the crates in youki workspace as dependencies for your own project, this section might be helpful for you.
+youki is the low-level runtime that creates and starts an OCI container.
+Your container engine continues to handle image management and orchestration.
 
-This is divided into following sub-sections :
+- [Install and try youki](./basic_setup.md).
+- [Evaluate alongside runc](../guide/switch-from-runc.md).
+- Use [Docker](../guide/docker.md), [Podman](../guide/podman.md) or [Kubernetes](./kubernetes.md).
+- [Run an OCI bundle directly](./basic_usage.md).
+- [Compare startup overhead and memory footprint](../guide/performance.md).
 
-- Basic Setup : This explains how the dependencies and setup required to compile and run youki
-- Basic Usage : This explains using youki itself as a low-level container runtime, or using one of the crates as dependencies
-- crates : This section provides brief explanation of the member crates of youki repo workspace
-  - libcgroups
-  - libcontainer
-  - liboci-cli
-  - libseccomp
-- Webassembly : This explains how to use webassembly module with youki.
-- Kubernetes : This explains how to install youki on a Kubernetes cluster as the OCI runtime via the youki-deploy DaemonSet.
+For specialized platforms, [build with libcontainer](../guide/custom-runtime.md), explore the [Rust crates](./crates.md), or run [WebAssembly](./webassembly.md).

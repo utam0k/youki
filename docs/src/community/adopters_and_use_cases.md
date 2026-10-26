@@ -1,25 +1,35 @@
-# Adopters and Use Cases
+# Adopters and use cases
 
-This page collects public examples of projects that use youki or its crates.
+These are public reports from [upstream issue #3366: Gather adopters and use cases](https://github.com/youki-dev/youki/issues/3366).
+They include uses of the libraries as well as the youki executable.
 
-If you would like to add your project, please open a pull request with:
+## rk8s
 
-- project name and link
-- a one-line summary
-- crates being used, if you want to share them
+[rk8s](https://github.com/rk8s-dev/rk8s) is a lightweight Kubernetes-compatible orchestration system written in Rust.
+It implements the Container Runtime Interface and supports single containers, Kubernetes-style Pods and Docker Compose-style applications.
 
-## [rk8s](https://github.com/rk8s-dev/rk8s)
+Crates used: `libcontainer`, `libcgroups`.
 
-A lightweight Kubernetes-compatible container orchestration system written in Rust, implementing the Container Runtime Interface (CRI) with support for single containers, Kubernetes-style pods, and Docker Compose-style multi-container applications.
+[Project report](https://github.com/youki-dev/youki/issues/3366#issuecomment-3765275589).
 
-Uses: `libcontainer`, `libcgroups`
+## runwasi
 
-## [runwasi](https://github.com/containerd/runwasi)
+[runwasi](https://github.com/containerd/runwasi) is a containerd shim for running WebAssembly containers with Docker and Kubernetes.
+It uses `libcontainer` to build the OCI-compatible sandbox and to run native containers in the same Pod, such as sidecars.
 
-A containerd shim that runs WebAssembly workloads in Docker and Kubernetes while using an OCI-compatible sandbox.
+Crate used: `libcontainer`.
 
-Uses: `libcontainer`
+[Project report](https://github.com/youki-dev/youki/issues/3366#issuecomment-3862871826).
 
-## [SpinKube](https://www.spinkube.dev/)
+## SpinKube
 
-A platform for running Spin applications on Kubernetes. SpinKube uses `runwasi`, which in turn uses `libcontainer` to provide an OCI-compatible sandbox for workloads.
+[SpinKube](https://www.spinkube.dev/) runs Spin applications on Kubernetes.
+It uses `libcontainer` through runwasi.
+
+[Project report](https://github.com/youki-dev/youki/issues/3366#issuecomment-3862871826).
+
+## Build something of your own
+
+See [use cases](../use-cases/index.md) for integration paths, and [customizing libcontainer](../guide/custom-runtime.md) for the executor extension point.
+
+To add a project, comment on [#3366](https://github.com/youki-dev/youki/issues/3366) with its name, link, a short summary and the crates you use.

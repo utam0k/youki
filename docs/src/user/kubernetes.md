@@ -5,7 +5,10 @@ Kubernetes cluster. Once youki is installed on each node and the
 node's container runtime is configured to know about it, individual
 Pods can opt in via `runtimeClassName: youki`.
 
-## youki-deploy: ready-to-use installer for kind / containerd
+For an initial evaluation, keep the cluster's current default and opt in with a RuntimeClass.
+Use a disposable kind cluster for the installer walkthrough below.
+
+## youki-deploy: installer for kind / containerd
 
 The repository ships a small installer under
 [`tools/youki-deploy/`](https://github.com/youki-dev/youki/tree/main/tools/youki-deploy)
@@ -59,7 +62,20 @@ spec:
 
 Pods without `runtimeClassName` continue to use whatever the cluster's
 default OCI runtime is (typically `runc`), so installing youki-deploy
-is non-disruptive for existing workloads.
+keeps the default runtime selection unchanged. The installer still modifies host configuration and restarts containerd; evaluate it on test nodes first.
+
+## Verify and return to the previous runtime
+
+Check that installation completed and the RuntimeClass is available:
+
+~~~sh
+kubectl --context=kind-youki-deploy get runtimeclass youki
+kubectl --context=kind-youki-deploy get nodes -l youki.dev/runtime-ready=true
+~~~
+
+The supplied RuntimeClass schedules only onto nodes marked ready by the installer.
+To return a workload to the cluster default, recreate its Pods without `runtimeClassName: youki`.
+For the disposable kind example, `just clean-test-kind-deploy` deletes the cluster.
 
 ## Caveats
 

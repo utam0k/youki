@@ -1,0 +1,18 @@
+{
+  "name": "youki-docs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vitepress dev .",
+    "build": "vitepress build .",
+    "preview": "vitepress preview .",
+    "check:links": "node scripts/check-links.mjs"
+  },
+  "devDependencies": {
+    "vitepress": "1.6.4",
+    "vue": "3.5.22"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
