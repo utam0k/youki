@@ -50,3 +50,17 @@ The workflow passes the current source branch through `DOCS_BRANCH` for edit lin
 
 The release updater writes the example `YOUKI_VERSION` in `src/user/basic_setup.md`.
 Rust snippet imports use named `// #region` comments in their source files.
+
+## Brand assets and diagrams
+
+The youki icon and the CNCF light/dark wordmarks are unmodified SVGs from [cncf/artwork](https://github.com/cncf/artwork/tree/b4b5989332c822ef09d5b38a512e2b39c63e32f2):
+
+- `projects/youki/icon/color/youki-icon-color.svg`
+- `other/cncf/horizontal/color/cncf-color.svg`
+- `other/cncf/horizontal/white/cncf-white.svg`
+
+They live in `src/public/branding/`. CNCF project status links to the [official youki project page](https://www.cncf.io/projects/youki/).
+The shared footer is visible on documentation pages as well as the homepage.
+
+The runtime diagrams in `src/assets/runtime-flow*.svg` explain the CLI and library integration paths.
+The mobile version keeps labels readable on narrow screens.

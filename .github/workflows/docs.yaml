@@ -48,6 +48,70 @@ jobs:
         run: npm run build
       - name: Check generated links and anchors
         run: npm run check:links
+
+      - name: Install browser for branding verification
+        run: |
+          npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Verify branding, responsive diagrams and shared footer
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/docs-preview.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/youki/ > /dev/null; then break; fi
+            sleep 1
+          done
+          node --input-type=module <<'JS'
+          import { chromium } from 'playwright'
+          import { readFileSync } from 'node:fs'
+          const browser = await chromium.launch()
+          const scenarios = [
+            { name: 'desktop', width: 1440, height: 1000, colorScheme: 'light' },
+            { name: 'mobile', width: 390, height: 844, colorScheme: 'light' },
+            { name: 'desktop-dark', width: 1440, height: 1000, colorScheme: 'dark' },
+            { name: 'mobile-dark', width: 390, height: 844, colorScheme: 'dark' }
+          ]
+          for (const scenario of scenarios) {
+            const context = await browser.newContext({ viewport: { width: scenario.width, height: scenario.height }, colorScheme: scenario.colorScheme })
+            const page = await context.newPage()
+            const errors = []
+            page.on('pageerror', error => errors.push(error.message))
+            for (const route of ['', 'guide/custom-runtime.html']) {
+              await page.goto('http://127.0.0.1:4173/youki/' + route, { waitUntil: 'networkidle' })
+              const footer = page.locator('footer.VPFooter')
+              if (!(await footer.isVisible())) throw new Error('Footer hidden: ' + scenario.name + ' ' + route)
+              await footer.scrollIntoViewIfNeeded()
+              await page.waitForFunction(() => Array.from(document.images).every(image => image.complete && image.naturalWidth > 0))
+              const status = await footer.locator('.cncf-status').innerText()
+              if (!status.includes('Cloud Native Computing Foundation Sandbox project')) throw new Error('Missing project status')
+              const expected = scenario.colorScheme === 'dark' ? '.cncf-logo-dark' : '.cncf-logo-light'
+              if (!(await footer.locator(expected).isVisible())) throw new Error('Wrong CNCF logo theme')
+              if (!(await page.locator('.VPNavBarTitle img').isVisible())) throw new Error('Header logo missing')
+              const size = await page.evaluate(() => ({ content: document.documentElement.scrollWidth, viewport: innerWidth }))
+              if (size.content > size.viewport + 1) throw new Error('Horizontal overflow: ' + JSON.stringify(size))
+              if (!route) {
+                const width = await page.locator('.runtime-diagram img').evaluate(image => image.naturalWidth)
+                if (width !== (scenario.width < 640 ? 480 : 1100)) throw new Error('Wrong diagram variant: ' + width)
+              } else if (scenario.width >= 960) {
+                const padding = await footer.evaluate(element => parseFloat(getComputedStyle(element).paddingLeft))
+                if (padding < 300) throw new Error('Footer overlaps sidebar')
+              }
+              await page.evaluate(() => window.scrollTo(0, 0))
+              await page.waitForTimeout(200)
+              let name
+              if (!route && scenario.colorScheme === 'light') name = scenario.name.toUpperCase()
+              if (route && scenario.name === 'desktop-dark') name = 'GUIDE_DARK'
+              if (name) {
+                const path = '/tmp/branding-' + name + '.jpg'
+                await page.screenshot({ path, type: 'jpeg', quality: 60, fullPage: true })
+                console.log('BRANDING_PREVIEW_' + name + '=' + readFileSync(path).toString('base64'))
+              }
+              console.log('Verified ' + scenario.name + ' /' + route)
+            }
+            if (errors.length) throw new Error(errors.join('; '))
+            await context.close()
+          }
+          await browser.close()
+          JS
       - uses: actions/upload-pages-artifact@v3
         with:
           path: docs/.vitepress/dist

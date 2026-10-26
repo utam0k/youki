@@ -67,10 +67,12 @@ export default defineConfig({
   description: 'A fast, lightweight OCI runtime written in Rust. Run containers or build your own runtime with libcontainer.',
   base,
   srcDir: 'src',
+  head: [['link', { rel: 'icon', type: 'image/svg+xml', href: base + 'branding/youki.svg' }]],
   cleanUrls: false,
   lastUpdated: true,
   themeConfig: {
     siteTitle: 'youki',
+    logo: { src: '/branding/youki.svg', alt: 'youki' },
     nav: [
       item('Guide', '/user/basic_setup'),
       item('Use cases', '/use-cases/'),
@@ -97,7 +99,7 @@ export default defineConfig({
     },
     outline: [2, 3],
     footer: {
-      message: 'A CNCF Sandbox project. Apache-2.0 licensed. <a href="https://lfprojects.org/policies/">Project policies</a>.',
+      message: `<a class="cncf-logo" href="https://www.cncf.io/projects/youki/"><img class="cncf-logo-light" src="${base}branding/cncf-color.svg" width="220" height="42" alt="Cloud Native Computing Foundation"><img class="cncf-logo-dark" src="${base}branding/cncf-white.svg" width="220" height="42" alt="Cloud Native Computing Foundation"></a><span class="cncf-status">youki is a <a href="https://www.cncf.io/projects/youki/">Cloud Native Computing Foundation Sandbox project</a>.</span><span class="project-legal">Apache-2.0 licensed. <a href="https://lfprojects.org/policies/">Project policies</a>.</span>`,
       copyright: 'Copyright Contributors to youki, a Series of LF Projects, LLC.'
     }
   }

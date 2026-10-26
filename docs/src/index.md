@@ -6,6 +6,9 @@ hero:
   name: youki
   text: A fast, lightweight OCI runtime.
   tagline: Written in Rust. Run existing containers with your usual tools, or build your own runtime with libcontainer.
+  image:
+    src: /branding/youki.svg
+    alt: youki
   actions:
     - theme: brand
       text: Try youki
@@ -37,6 +40,11 @@ features:
 youki implements the [OCI Runtime Specification](https://github.com/opencontainers/runtime-spec).
 Docker, Podman and containerd handle images and orchestration; youki creates and runs the container.
 You can evaluate it alongside runc, one workload at a time.
+
+<picture class="runtime-diagram">
+  <source media="(max-width: 639px)" srcset="./assets/runtime-flow-mobile.svg" width="480" height="600">
+  <img src="./assets/runtime-flow.svg" alt="Existing tools select the youki CLI. Your Rust runtime can embed libcontainer and supply a custom Executor. Both paths use the same Rust core to set up isolation with the Linux kernel." width="1100" height="360" loading="lazy">
+</picture>
 
 After [installing youki](/user/basic_setup), try it with Podman:
 

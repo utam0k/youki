@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 360" width="1100" height="360" role="img" aria-labelledby="title desc">
+<title id="title">Two ways to use youki</title><desc id="desc">Existing tools select the youki executable. Rust platforms can embed libcontainer and supply their own Executor. Both paths use the shared Rust core to set up Linux container isolation.</desc>
+<style>
+  svg { --canvas:#ffffff; --panel:#f6f6f7; --text:#252529; --muted:#58585f; --line:#929299; --border:#d8d8dd; --accent:#a94224; --accent-bg:#fff4ee; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+  @media (prefers-color-scheme:dark) { svg { --canvas:#1b1b1f; --panel:#252529; --text:#ececf0; --muted:#b8b8c2; --line:#92929b; --border:#55555f; --accent:#f1a186; --accent-bg:#36251f; } }
+  .canvas { fill:var(--canvas); }
+  .box { fill:var(--panel); stroke:var(--border); stroke-width:1.5; }
+  .accent { fill:var(--accent-bg); stroke:var(--accent); }
+  .title { fill:var(--text); font-size:25px; font-weight:650; }
+  .body { fill:var(--muted); font-size:19px; }
+  .label { fill:var(--muted); font-size:18px; }
+  .arrow { fill:none; stroke:var(--line); stroke-width:2; stroke-linejoin:round; marker-end:url(#arrow); }
+  .connector { fill:none; stroke:var(--line); stroke-width:2; stroke-linejoin:round; }
+</style>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="var(--line)"/></marker></defs>
+<rect class="canvas" width="1100" height="360" rx="8"/>
+<text class="label" x="24" y="26">Use your existing tools</text>
+<rect class="box" x="24" y="44" width="240" height="84" rx="6"/>
+<text class="title" x="144" y="79" text-anchor="middle">Docker · Podman</text>
+<text class="body" x="144" y="108" text-anchor="middle">containerd</text>
+<path class="arrow" d="M264 86 H322"/>
+<rect class="box accent" x="322" y="44" width="180" height="84" rx="6"/>
+<text class="title" x="412" y="79" text-anchor="middle">youki</text>
+<text class="body" x="412" y="108" text-anchor="middle">OCI runtime CLI</text>
+<text class="label" x="24" y="202">Build in Rust</text>
+<rect class="box" x="24" y="220" width="478" height="96" rx="6"/>
+<text class="title" x="263" y="259" text-anchor="middle">Your Rust runtime</text>
+<text class="body" x="263" y="290" text-anchor="middle">Your policy + custom Executor</text>
+<path class="connector" d="M502 86 H548 V186 M502 268 H548 V186"/>
+<path class="arrow" d="M548 186 H592"/>
+<rect class="box accent" x="592" y="136" width="220" height="100" rx="6"/>
+<text class="title" x="702" y="177" text-anchor="middle">libcontainer</text>
+<text class="body" x="702" y="208" text-anchor="middle">Shared Rust core</text>
+<path class="arrow" d="M812 186 H870"/>
+<rect class="box" x="870" y="136" width="206" height="100" rx="6"/>
+<text class="title" x="973" y="172" text-anchor="middle">Linux kernel</text>
+<text class="body" x="973" y="200" text-anchor="middle">Namespaces</text>
+<text class="body" x="973" y="222" text-anchor="middle">cgroups · mounts</text>
+</svg>
