@@ -9,7 +9,7 @@ const guide = [
   { text: 'Start here', items: [
     item('Why youki?', '/youki'),
     item('Install and try youki', '/user/basic_setup'),
-    item('Coming from runc', '/guide/switch-from-runc'),
+    item('Adopt youki', '/guide/adopt-youki'),
     item('Performance and footprint', '/guide/performance')
   ] },
   { text: 'Run containers', items: [

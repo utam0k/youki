@@ -76,3 +76,10 @@ For a service-level comparison, also measure the container engine, shim and appl
 The project does not publish a current memory comparison on this page; the commands above let you obtain one for your environment.
 
 See the [upstream memory measurement discussion](https://github.com/youki-dev/youki/issues/1515) for the distinction between runtime and application memory.
+
+## Estimate the yearly impact
+
+Use your yearly container count to see how small differences in runtime overhead add up.
+The prefilled values use the historical lifecycle example above; open the timing settings to use your own measurements.
+
+<AnnualImpact />

@@ -4,7 +4,7 @@ youki is the low-level runtime that creates and starts an OCI container.
 Your container engine continues to handle image management and orchestration.
 
 - [Install and try youki](./basic_setup.md).
-- [Evaluate alongside runc](../guide/switch-from-runc.md).
+- [Adopt youki with your tools](../guide/adopt-youki.md).
 - Use [Docker](../guide/docker.md), [Podman](../guide/podman.md) or [Kubernetes](./kubernetes.md).
 - [Run an OCI bundle directly](./basic_usage.md).
 - [Compare startup overhead and memory footprint](../guide/performance.md).

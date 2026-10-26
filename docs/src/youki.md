@@ -31,7 +31,7 @@ Use supported releases and follow the project's [security policy](https://github
 | Keep your OCI images and container tooling | Integrate container lifecycle management into a Rust application |
 | Select youki per container or per Pod | Supply your own workload executor |
 | Compare behavior with runc before rolling out | Reuse Linux isolation setup for a specialized runtime |
-| [Evaluate alongside runc](./guide/switch-from-runc.md) | [Build a custom runtime](./guide/custom-runtime.md) |
+| [Adopt youki with your tools](./guide/adopt-youki.md) | [Build a custom runtime](./guide/custom-runtime.md) |
 
 See [real projects using youki and its crates](./community/adopters_and_use_cases.md).
 

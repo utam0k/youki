@@ -6,7 +6,8 @@
     "dev": "vitepress dev .",
     "build": "vitepress build .",
     "preview": "vitepress preview .",
-    "check:links": "node scripts/check-links.mjs"
+    "check:links": "node scripts/check-links.mjs",
+    "test:impact": "node --test scripts/annual-impact.test.mjs"
   },
   "devDependencies": {
     "vitepress": "1.6.4",

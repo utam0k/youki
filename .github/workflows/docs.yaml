@@ -44,6 +44,8 @@ jobs:
       - name: Check release updater syntax
         working-directory: .
         run: bash -n scripts/release_tag.sh
+      - name: Verify annual impact calculations
+        run: npm run test:impact
       - name: Build documentation
         run: npm run build
       - name: Check generated links and anchors
@@ -75,8 +77,34 @@ jobs:
             const page = await context.newPage()
             const errors = []
             page.on('pageerror', error => errors.push(error.message))
-            for (const route of ['', 'guide/custom-runtime.html']) {
+            for (const route of ['', 'guide/custom-runtime.html', 'guide/adopt-youki.html', 'guide/performance.html']) {
               await page.goto('http://127.0.0.1:4173/youki/' + route, { waitUntil: 'networkidle' })
+              if ((await page.getByText('Coming from runc', { exact: true }).count()) > 0 ||
+                  (await page.getByText('Switching from runc', { exact: true }).count()) > 0) throw new Error('Old adoption copy remains')
+              if (!route || route === 'guide/performance.html') {
+                const calculator = page.locator('.annual-impact')
+                const total = calculator.locator('[data-impact-total]')
+                if (await total.innerText() !== '31.4 hours') throw new Error('Wrong published yearly example')
+                await calculator.locator('#annual-container-count').fill('10000000')
+                await page.waitForFunction(() => document.querySelector('[data-impact-total]')?.textContent === '314.2 hours')
+                await calculator.locator('summary').click()
+                await calculator.locator('#annual-container-count').fill('1000')
+                await calculator.locator('#annual-baseline-ms').fill('10')
+                await calculator.locator('#annual-youki-ms').fill('20')
+                await page.waitForFunction(() => document.querySelector('[data-impact-total]')?.textContent === '10 seconds')
+                if (!(await calculator.locator('.result').innerText()).includes('more aggregate runtime time')) throw new Error('Negative impact hidden')
+                if (await calculator.locator('.bar.baseline').evaluate(element => element.style.width) !== '50%') throw new Error('Incorrect reference bar')
+                await calculator.locator('#annual-container-count').fill('')
+                if (!(await calculator.locator('.input-error').isVisible())) throw new Error('Blank input shown as a forecast')
+                await calculator.locator('#annual-container-count').fill('0')
+                await page.waitForFunction(() => document.querySelector('[data-impact-total]')?.textContent === '0 seconds')
+                for (const bar of await calculator.locator('.bar').all()) if (await bar.evaluate(element => element.style.width) !== '0%') throw new Error('Nonzero bar for zero starts')
+                await calculator.locator('#annual-baseline-ms').fill('224.6')
+                await calculator.locator('#annual-youki-ms').fill('111.5')
+                await calculator.getByRole('button', { name: '1m', exact: true }).click()
+                await page.waitForFunction(() => document.querySelector('[data-impact-total]')?.textContent === '31.4 hours')
+                await calculator.locator('summary').click()
+              }
               const footer = page.locator('footer.VPFooter')
               if (!(await footer.isVisible())) throw new Error('Footer hidden: ' + scenario.name + ' ' + route)
               await footer.scrollIntoViewIfNeeded()

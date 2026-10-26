@@ -48,7 +48,7 @@ docker run --rm --runtime youki hello-world
 
 ## Choose your path
 
-- [Coming from runc](../guide/switch-from-runc.md): compare behavior and overhead before rollout.
+- [Adopting youki](../guide/adopt-youki.md): compare behavior and overhead before rollout.
 - [Kubernetes](./kubernetes.md): select youki through a RuntimeClass.
 - [Standalone OCI containers](./basic_usage.md): create and manage an OCI bundle directly.
 - [Build a custom runtime](../guide/custom-runtime.md): use libcontainer from Rust.

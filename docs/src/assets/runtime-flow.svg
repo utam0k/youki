@@ -16,7 +16,7 @@
 <rect class="canvas" width="1100" height="360" rx="8"/>
 <text class="label" x="24" y="26">Use your existing tools</text>
 <rect class="box" x="24" y="44" width="240" height="84" rx="6"/>
-<text class="title" x="144" y="79" text-anchor="middle">Docker · Podman</text>
+<text class="title" x="144" y="79" text-anchor="middle" style="font-size:23px">Docker · Podman</text>
 <text class="body" x="144" y="108" text-anchor="middle">containerd</text>
 <path class="arrow" d="M264 86 H322"/>
 <rect class="box accent" x="322" y="44" width="180" height="84" rx="6"/>

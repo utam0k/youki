@@ -9,7 +9,7 @@ Use the youki executable with existing container tools, or build an execution pl
 Keep the application image and choose youki for a test container or Pod.
 Compare compatibility, startup overhead and runtime memory on your hosts before expanding.
 
-Start with [switching from runc](../guide/switch-from-runc.md), then choose [Docker](../guide/docker.md), [Podman](../guide/podman.md) or [Kubernetes](../user/kubernetes.md).
+Start with [adopting youki](../guide/adopt-youki.md), then choose [Docker](../guide/docker.md), [Podman](../guide/podman.md) or [Kubernetes](../user/kubernetes.md).
 
 ## Launch short-lived jobs
 

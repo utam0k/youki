@@ -43,7 +43,7 @@ The workflow passes the current source branch through `DOCS_BRANCH` for edit lin
 ## Content structure
 
 - Home: startup overhead, footprint, Rust memory safety, and customization.
-- Guide: installation, evaluation alongside runc, Docker, Podman and performance.
+- Guide: installation, adoption with existing tools, Docker, Podman and performance.
 - Build on youki: `libcontainer` and custom executors.
 - Use cases: concrete integration paths and public reports from upstream issue #3366.
 - Developers / Community: existing technical references and project information.
@@ -64,3 +64,13 @@ The shared footer is visible on documentation pages as well as the homepage.
 
 The runtime diagrams in `src/assets/runtime-flow*.svg` explain the CLI and library integration paths.
 The mobile version keeps labels readable on narrow screens.
+
+## Annual impact calculator
+
+The home and performance pages share `AnnualImpact.vue`.
+The initial values come from the historical README lifecycle benchmark; users can replace both timings.
+The result is aggregate runtime time across containers, not end-to-end deployment latency or a cost forecast.
+
+Run the numerical checks with `npm run test:impact`.
+The calculator retains negative differences when a user's youki timing is slower, and rejects invalid inputs.
+The adoption guide lives at `guide/adopt-youki.md`; the previous URL remains as a compatibility page.

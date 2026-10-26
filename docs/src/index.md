@@ -14,11 +14,11 @@ hero:
       text: Try youki
       link: /user/basic_setup
     - theme: alt
-      text: Coming from runc?
-      link: /guide/switch-from-runc
+      text: Adopt youki
+      link: /guide/adopt-youki
 features:
   - title: Fast startup
-    details: Reduce the overhead of creating and starting containers. Compare youki and runc on the same workload.
+    details: Reduce the overhead of creating and starting containers. Measure the effect on your own host and workload.
     link: /guide/performance
     linkText: See performance and measurements
   - title: Small memory footprint
@@ -35,11 +35,15 @@ features:
     linkText: Build with libcontainer
 ---
 
+## Estimate the yearly impact
+
+<AnnualImpact />
+
 ## Keep your images. Choose your runtime.
 
 youki implements the [OCI Runtime Specification](https://github.com/opencontainers/runtime-spec).
 Docker, Podman and containerd handle images and orchestration; youki creates and runs the container.
-You can evaluate it alongside runc, one workload at a time.
+Add it alongside your current runtime and try one workload at a time.
 
 <picture class="runtime-diagram">
   <source media="(max-width: 639px)" srcset="./assets/runtime-flow-mobile.svg" width="480" height="600">
@@ -58,7 +62,7 @@ Using Docker? [Register youki as an additional runtime](/guide/docker), then sel
 
 | Your goal | Start here |
 | --- | --- |
-| Evaluate an alternative to runc without changing the default | [Switching from runc](/guide/switch-from-runc) |
+| Add youki to your existing container workflow | [Adopt youki](/guide/adopt-youki) |
 | Run Linux containers with your existing tools | [Docker](/guide/docker), [Podman](/guide/podman), [Kubernetes](/user/kubernetes) |
 | Build a Rust container runtime or job runner | [Customize with libcontainer](/guide/custom-runtime) |
 | Execute WebAssembly workloads in an OCI sandbox | [WebAssembly](/user/webassembly) |

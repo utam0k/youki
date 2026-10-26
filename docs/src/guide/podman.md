@@ -37,6 +37,6 @@ Run builds, pulls and containers in the same user context; rootful and rootless 
 
 ## Choose the next step
 
-- [Evaluate your application against runc](./switch-from-runc.md).
+- [Try youki with your application](./adopt-youki.md).
 - [Measure lifecycle time and memory](./performance.md).
 - [Run WebAssembly workloads](../user/webassembly.md) with a suitable youki build.
