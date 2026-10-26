@@ -1,11 +1,11 @@
 ---
 layout: home
-title: A fast, lightweight OCI runtime in Rust
-description: Run existing containers with youki, a fast and lightweight OCI runtime written in Rust, or customize your own runtime with libcontainer.
+title: Fast container starts and a Rust core you can customize
+description: Start containers with a fast, lightweight OCI runtime written in Rust. Keep your existing tools, or build your own execution platform with libcontainer.
 hero:
   name: youki
-  text: A fast, lightweight OCI runtime.
-  tagline: Written in Rust. Run existing containers with your usual tools, or build your own runtime with libcontainer.
+  text: Fast container starts. A Rust core you can customize.
+  tagline: A lightweight OCI runtime for your existing container tools, with libcontainer for building your own execution platform.
   image:
     src: /branding/youki.svg
     alt: youki
@@ -14,67 +14,83 @@ hero:
       text: Try youki
       link: /user/basic_setup
     - theme: alt
-      text: Adopt youki
-      link: /guide/adopt-youki
+      text: Build with libcontainer
+      link: /guide/custom-runtime
 features:
   - title: Fast startup
-    details: Reduce the overhead of creating and starting containers. Measure the effect on your own host and workload.
+    details: Reduce the runtime work of creating and starting containers. Useful for CI workers, batch jobs and other frequently launched workloads.
     link: /guide/performance
-    linkText: See performance and measurements
+    linkText: See measurements and conditions
+  - title: Customize in Rust
+    details: Embed libcontainer, control the container lifecycle and supply your own workload executor.
+    link: /guide/custom-runtime
+    linkText: Build your execution platform
   - title: Small memory footprint
-    details: Keep runtime memory overhead lean when launching containers, including short-lived jobs.
+    details: Keep runtime overhead lean. Measure the runtime's memory separately from your application's working set.
     link: /guide/performance#memory-footprint
-    linkText: Understand the footprint
+    linkText: Explore the footprint
   - title: Rust at the isolation boundary
-    details: Memory safety helps prevent classes of bugs in code that sets up container isolation.
+    details: Rust's memory safety helps prevent classes of bugs in code that prepares container isolation.
     link: /youki#rust-and-security
     linkText: Why Rust matters
-  - title: Yours to customize
-    details: Use libcontainer to control the container lifecycle and plug in your own workload executor.
-    link: /guide/custom-runtime
-    linkText: Build with libcontainer
 ---
 
-## Estimate the yearly impact
+## Try youki with your existing tools
 
-<AnnualImpact />
+Keep your container images and the tools you already use.
+Docker, Podman and containerd handle images and orchestration; youki implements the [OCI Runtime Specification](https://github.com/opencontainers/runtime-spec) to create and run the container.
 
-## Keep your images. Choose your runtime.
+After [installing youki](/user/basic_setup), run your first container with Podman:
 
-youki implements the [OCI Runtime Specification](https://github.com/opencontainers/runtime-spec).
-Docker, Podman and containerd handle images and orchestration; youki creates and runs the container.
-Add it alongside your current runtime and try one workload at a time.
+~~~sh
+podman run --rm --runtime /usr/local/bin/youki docker.io/library/hello-world
+~~~
+
+Use the [Docker guide](/guide/docker) or [Kubernetes guide](/user/kubernetes) for those environments.
+[Adopt youki](/guide/adopt-youki) walks through adding it alongside your current runtime and trying one workload at a time.
+
+## Build your own runtime in Rust
+
+Keep scheduling and application policy in your own code.
+Use `libcontainer` to create and manage the container, and provide an `Executor` that validates and runs your workload.
+
+The extension point is explicit:
+
+~~~rust
+ContainerBuilder::new("my-workload".to_owned(), SyscallType::default())
+    .with_executor(my_executor);
+~~~
+
+[Build with libcontainer](/guide/custom-runtime) for the builder setup, executor contract and container lifecycle.
+Explore the [Rust crates](/user/crates) for the building blocks you need.
 
 <picture class="runtime-diagram">
   <source media="(max-width: 639px)" srcset="./assets/runtime-flow-mobile.svg" width="480" height="600">
   <img src="./assets/runtime-flow.svg" alt="Existing tools select the youki CLI. Your Rust runtime can embed libcontainer and supply a custom Executor. Both paths use the same Rust core to set up isolation with the Linux kernel." width="1100" height="360" loading="lazy">
 </picture>
 
-After [installing youki](/user/basic_setup), try it with Podman:
+## Built on the same Rust core
 
-~~~sh
-podman run --rm --runtime /usr/local/bin/youki docker.io/library/hello-world
-~~~
-
-Using Docker? [Register youki as an additional runtime](/guide/docker), then select it with `--runtime youki`.
-
-## What do you want to build?
-
-| Your goal | Start here |
+| Project | What it builds with youki's libraries |
 | --- | --- |
-| Add youki to your existing container workflow | [Adopt youki](/guide/adopt-youki) |
-| Run Linux containers with your existing tools | [Docker](/guide/docker), [Podman](/guide/podman), [Kubernetes](/user/kubernetes) |
-| Build a Rust container runtime or job runner | [Customize with libcontainer](/guide/custom-runtime) |
-| Execute WebAssembly workloads in an OCI sandbox | [WebAssembly](/user/webassembly) |
-| Compare startup overhead and memory on your hosts | [Performance guide](/guide/performance) |
+| [runwasi](https://github.com/containerd/runwasi) | An OCI-compatible sandbox for WebAssembly and native sidecars, using `libcontainer`. |
+| [SpinKube](https://www.spinkube.dev/) | Spin applications on Kubernetes, using `libcontainer` through runwasi. |
+| [rk8s](https://github.com/rk8s-dev/rk8s) | Kubernetes-compatible orchestration in Rust, using `libcontainer` and `libcgroups`. |
 
-## Built on youki
+These are [public reports from the projects](https://github.com/youki-dev/youki/issues/3366).
+Read the [adopter reports](/community/adopters_and_use_cases) or explore [use cases](/use-cases/) for your own platform.
 
-[runwasi](https://github.com/containerd/runwasi) uses `libcontainer` for its OCI-compatible sandbox and native sidecars.
-[SpinKube](https://www.spinkube.dev/) uses it through runwasi.
-[rk8s](https://github.com/rk8s-dev/rk8s) builds Kubernetes-compatible orchestration in Rust.
+## Fast startup, measured on your workload
 
-These are [publicly reported use cases](https://github.com/youki-dev/youki/issues/3366), covering both the runtime and its libraries.
-[Explore the use cases](/use-cases/) or [share yours](https://github.com/youki-dev/youki/issues/3366).
+Container setup is a repeated cost for short-lived jobs and platforms that launch containers frequently.
+youki focuses on low runtime overhead at that boundary.
+
+The [performance guide](/guide/performance) includes published lifecycle measurements with their versions and test conditions, plus steps to compare lifecycle time and memory on your host.
+
+Once you have comparable timings, [estimate their yearly impact](/guide/performance#estimate-the-yearly-impact) using your own container count.
+
+## Project and community
 
 youki is a [CNCF Sandbox project](https://www.cncf.io/projects/youki/).
+Meet the [maintainers](/community/maintainer), read the [governance](/community/governance), and see how to [contribute](/community/contributing).
+The project's [security policy](https://github.com/youki-dev/youki/security/policy) explains vulnerability reporting.

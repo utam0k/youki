@@ -42,7 +42,7 @@ The workflow passes the current source branch through `DOCS_BRANCH` for edit lin
 
 ## Content structure
 
-- Home: startup overhead, footprint, Rust memory safety, and customization.
+- Home: fast container starts, a quick trial with existing tools, Rust customization, public use cases, measurements and project information.
 - Guide: installation, adoption with existing tools, Docker, Podman and performance.
 - Build on youki: `libcontainer` and custom executors.
 - Use cases: concrete integration paths and public reports from upstream issue #3366.
@@ -67,7 +67,7 @@ The mobile version keeps labels readable on narrow screens.
 
 ## Annual impact calculator
 
-The home and performance pages share `AnnualImpact.vue`.
+The performance page uses `AnnualImpact.vue`; the homepage links to it after the measurement guide.
 The initial values come from the historical README lifecycle benchmark; users can replace both timings.
 The result is aggregate runtime time across containers, not end-to-end deployment latency or a cost forecast.
 
